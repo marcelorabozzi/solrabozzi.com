@@ -1,0 +1,58 @@
+server {
+    listen 80;
+    server_name solrabozzi.com www.solrabozzi.com;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/solrabozzi.com/frontend/dist;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name solrabozzi.com www.solrabozzi.com;
+
+    root /var/www/solrabozzi.com/frontend/dist;
+    index index.html;
+
+    client_max_body_size 100M;
+
+    ssl_certificate     /etc/letsencrypt/live/solrabozzi.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/solrabozzi.com/privkey.pem;
+
+    # Compresión Gzip para optimizar velocidad de carga
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+    # Frontend SPA (soporte para React Router / fallback index.html)
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Proxy reverso hacia la API en Node.js (Puerto 5000)
+    location /api {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Caché para recursos estáticos (CSS, JS, imágenes, etc.)
+    location ~* \.(?:css|js|jpg|jpeg|gif|png|ico|cur|gz|svg|svgz|mp4|ogg|ogv|webm|htc)$ {
+        expires 1M;
+        access_log off;
+        add_header Cache-Control "public";
+    }
+
+    # Logs de acceso y errores específicos para el dominio
+    access_log /var/log/nginx/solrabozzi_access.log;
+    error_log /var/log/nginx/solrabozzi_error.log;
+}

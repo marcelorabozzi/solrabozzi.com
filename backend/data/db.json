@@ -1,0 +1,86 @@
+{
+  "invitaciones": [
+    {
+      "id": "92b06d38-a98a-468f-a6ab-97e73185cfa7",
+      "nombre": "Prueba",
+      "apellido": "Automatizada",
+      "telefono": "+5491199998888",
+      "cantidad_personas": 2,
+      "fecha_confirmacion": "2026-08-09T15:49:26.413Z",
+      "modalidad_pago": "despues",
+      "estado_asistencia": "confirmado",
+      "estado_pago": "verificado",
+      "importe_total": 75000,
+      "observaciones": "Prueba de integración sin archivos",
+      "comprobante": {
+        "archivo": "",
+        "tipo_archivo": "",
+        "fecha_carga": null
+      },
+      "fecha_creacion": "2026-08-09T15:49:26.413Z",
+      "fecha_actualizacion": "2026-08-09T15:49:26.432Z"
+    },
+    {
+      "id": "1465b606-3de7-4055-8919-f5047487b255",
+      "nombre": "Juan",
+      "apellido": "Gomez",
+      "telefono": "1122334455",
+      "cantidad_personas": 2,
+      "fecha_confirmacion": "2026-08-09T16:14:01.488Z",
+      "modalidad_pago": "despues",
+      "estado_asistencia": "confirmado",
+      "estado_pago": "pendiente",
+      "importe_total": 75000,
+      "observaciones": "",
+      "comprobante": {
+        "archivo": "",
+        "tipo_archivo": "",
+        "fecha_carga": null
+      },
+      "fecha_creacion": "2026-08-09T16:14:01.488Z",
+      "fecha_actualizacion": "2026-08-09T16:14:01.488Z"
+    }
+  ],
+  "asistentes": [
+    {
+      "id": "48fa6088-cc50-44e6-bce1-099e515c0b18",
+      "invitacion_id": "92b06d38-a98a-468f-a6ab-97e73185cfa7",
+      "nombre": "Prueba Uno",
+      "apellido": "Automatizada",
+      "tipo_asistente": "adulto",
+      "restriccion_alimentaria": "ninguna",
+      "restriccion_alimentaria_detalle": "",
+      "mesa": ""
+    },
+    {
+      "id": "43adbf98-af73-4505-a68f-c18a17b09911",
+      "invitacion_id": "92b06d38-a98a-468f-a6ab-97e73185cfa7",
+      "nombre": "Prueba Dos",
+      "apellido": "Automatizada",
+      "tipo_asistente": "menor",
+      "restriccion_alimentaria": "celiaquia",
+      "restriccion_alimentaria_detalle": "",
+      "mesa": ""
+    },
+    {
+      "id": "50fb5a00-6dc5-4078-a085-ed747e10dffe",
+      "invitacion_id": "1465b606-3de7-4055-8919-f5047487b255",
+      "nombre": "Juan",
+      "apellido": "Gomez",
+      "tipo_asistente": "adulto",
+      "restriccion_alimentaria": "ninguna",
+      "restriccion_alimentaria_detalle": "",
+      "mesa": ""
+    },
+    {
+      "id": "342e9035-ccff-4fad-ab0c-afc1a2040022",
+      "invitacion_id": "1465b606-3de7-4055-8919-f5047487b255",
+      "nombre": "Maria",
+      "apellido": "Gomez",
+      "tipo_asistente": "menor",
+      "restriccion_alimentaria": "celiaquia",
+      "restriccion_alimentaria_detalle": "",
+      "mesa": ""
+    }
+  ]
+}
