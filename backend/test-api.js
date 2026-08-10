@@ -1,7 +1,7 @@
 const http = require('http');
 
 const PORT = process.env.PORT || 5000;
-const BASE_URL = `http://localhost:${PORT}`;
+const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 // Helper para realizar peticiones POST
 function post(url, data, isJson = true) {
@@ -107,12 +107,13 @@ async function runTests() {
       nombre: 'Prueba',
       apellido: 'Automatizada',
       telefono: '+5491199998888',
+      email: 'prueba@correo.com',
       cantidad_personas: 2,
       modalidad_pago: 'despues',
       importe_total: 75000,
       observaciones: 'Prueba de integración sin archivos',
       asistentes: [
-        { nombre: 'Prueba Uno', apellido: 'Automatizada', tipo_asistente: 'adulto', restriccion_alimentaria: 'ninguna' },
+        { nombre: 'Prueba Uno', apellido: 'Automatizada', email: 'uno@correo.com', tipo_asistente: 'adulto', restriccion_alimentaria: 'ninguna' },
         { nombre: 'Prueba Dos', apellido: 'Automatizada', tipo_asistente: 'menor', restriccion_alimentaria: 'celiaquia' }
       ]
     };

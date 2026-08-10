@@ -48,15 +48,37 @@ export default function AdminPanel() {
         handleLogout();
         return;
       }
-      const statsData = await statsRes.json();
-      setStats(statsData);
+      
+      let statsData = null;
+      const statsContentType = statsRes.headers.get('content-type');
+      if (statsContentType && statsContentType.includes('application/json')) {
+        statsData = await statsRes.json();
+      }
+
+      if (!statsRes.ok) {
+        throw new Error(statsData?.error || `Error al obtener estadísticas (Código ${statsRes.status})`);
+      }
+      if (statsData) {
+        setStats(statsData);
+      }
 
       // Obtener RSVPs
       const rsvpsRes = await fetch('/api/admin/rsvps', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      const rsvpsData = await rsvpsRes.json();
-      setRsvps(rsvpsData);
+      
+      let rsvpsData = null;
+      const rsvpsContentType = rsvpsRes.headers.get('content-type');
+      if (rsvpsContentType && rsvpsContentType.includes('application/json')) {
+        rsvpsData = await rsvpsRes.json();
+      }
+
+      if (!rsvpsRes.ok) {
+        throw new Error(rsvpsData?.error || `Error al obtener confirmaciones (Código ${rsvpsRes.status})`);
+      }
+      if (rsvpsData) {
+        setRsvps(rsvpsData);
+      }
     } catch (err) {
       console.error('Error cargando datos del dashboard:', err);
     } finally {
@@ -74,9 +96,18 @@ export default function AdminPanel() {
         body: JSON.stringify({ username, password })
       });
       
-      const data = await res.json();
+      let data = null;
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await res.json();
+      }
+
       if (!res.ok) {
-        throw new Error(data.error || 'Credenciales inválidas.');
+        throw new Error(data?.error || `Error de inicio de sesión (Código ${res.status}).`);
+      }
+
+      if (!data || !data.token) {
+        throw new Error('Respuesta inválida del servidor.');
       }
 
       localStorage.setItem('adminToken', data.token);
@@ -477,6 +508,10 @@ export default function AdminPanel() {
                   <strong>{selectedRsvp.telefono}</strong>
                 </div>
                 <div>
+                  <span style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Email</span>
+                  <strong>{selectedRsvp.email || '-'}</strong>
+                </div>
+                <div>
                   <span style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Forma de Pago</span>
                   <strong>{selectedRsvp.modalidad_pago === 'ahora' ? 'Transferencia Bancaria' : 'Pagar Después'}</strong>
                 </div>
@@ -523,6 +558,7 @@ export default function AdminPanel() {
                         <strong>{asis.nombre} {asis.apellido}</strong>
                         <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                           Categoría: {asis.tipo_asistente === 'adulto' ? 'Mayor' : 'Menor de 12'}
+                          {asis.email && ` • Email: ${asis.email}`}
                         </span>
                       </div>
                       <div>

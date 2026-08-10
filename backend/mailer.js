@@ -37,6 +37,7 @@ async function sendRsvpNotification(rsvp, asistentes) {
     <tr>
       <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${idx + 1}</td>
       <td style="padding: 8px; border: 1px solid #ddd;">${a.nombre} ${a.apellido}</td>
+      <td style="padding: 8px; border: 1px solid #ddd;">${a.email || 'No especificado'}</td>
       <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${a.tipo_asistente === 'menor' ? 'Menor' : 'Adulto'}</td>
       <td style="padding: 8px; border: 1px solid #ddd;">${a.restriccion_alimentaria || 'Ninguna'} ${a.restriccion_alimentaria_detalle ? `(${a.restriccion_alimentaria_detalle})` : ''}</td>
     </tr>
@@ -59,6 +60,10 @@ async function sendRsvpNotification(rsvp, asistentes) {
           <tr>
             <td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #edf2f7;">Teléfono:</td>
             <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">${rsvp.telefono}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #edf2f7;">Email:</td>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">${rsvp.email}</td>
           </tr>
           <tr>
             <td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #edf2f7;">Cantidad de Personas:</td>
@@ -84,6 +89,7 @@ async function sendRsvpNotification(rsvp, asistentes) {
             <tr style="background-color: #f7fafc;">
               <th style="padding: 8px; border: 1px solid #ddd;">#</th>
               <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Nombre y Apellido</th>
+              <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Email</th>
               <th style="padding: 8px; border: 1px solid #ddd;">Tipo</th>
               <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Restricciones Alimentarias</th>
             </tr>

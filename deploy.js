@@ -121,7 +121,7 @@ function executeRemoteCommands() {
     `systemctl reload nginx`,
 
     // Reiniciar backend con PM2 (o iniciarlo por primera vez si no existe)
-    `cd ${REMOTE_BACKEND} && (pm2 restart ${PM2_APP} || pm2 start server.js --name "${PM2_APP}")`,
+    `cd ${REMOTE_BACKEND} && (pm2 restart ${PM2_APP} --update-env || pm2 start server.js --name "${PM2_APP}")`,
 
     // Limpiar archivos en /tmp
     `rm -f /tmp/backend.tar.gz /tmp/frontend.tar.gz`,

@@ -7,13 +7,14 @@ export default function Invitation() {
     nombre: '',
     apellido: '',
     telefono: '',
+    email: '',
     cantidad_personas: 1,
     modalidad_pago: 'ahora',
     observaciones: '',
   });
 
   const [asistentes, setAsistentes] = useState([
-    { nombre: '', apellido: '', tipo_asistente: 'adulto', restriccion_alimentaria: 'ninguna', restriccion_alimentaria_detalle: '' }
+    { nombre: '', apellido: '', email: '', tipo_asistente: 'adulto', restriccion_alimentaria: 'ninguna', restriccion_alimentaria_detalle: '' }
   ]);
 
   const [isExistingRegistration, setIsExistingRegistration] = useState(false);
@@ -66,10 +67,28 @@ export default function Invitation() {
   // Manejar cambios en campos generales del formulario
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        [name]: value
+      };
+      
+      // Sincronizar el primer asistente con los datos del responsable
+      if (name === 'nombre' || name === 'apellido' || name === 'email') {
+        setAsistentes(prevAsis => {
+          const copy = [...prevAsis];
+          if (copy[0]) {
+            copy[0] = {
+              ...copy[0],
+              [name]: value
+            };
+          }
+          return copy;
+        });
+      }
+      
+      return updated;
+    });
 
     if (name === 'cantidad_personas') {
       const count = parseInt(value, 10) || 1;
@@ -80,20 +99,32 @@ export default function Invitation() {
   // Ajustar la cantidad de asistentes
   const adjustAsistentesCount = (count) => {
     setAsistentes(prev => {
-      const currentCount = prev.length;
+      let copy = [...prev];
+      const currentCount = copy.length;
       if (count > currentCount) {
-        const extra = Array(count - currentCount).fill(null).map(() => ({
-          nombre: '',
-          apellido: '',
-          tipo_asistente: 'adulto',
-          restriccion_alimentaria: 'ninguna',
-          restriccion_alimentaria_detalle: ''
-        }));
-        return [...prev, ...extra];
+        const extra = Array(count - currentCount).fill(null).map((_, i) => {
+          const isFirst = (currentCount + i) === 0;
+          return {
+            nombre: isFirst ? formData.nombre : '',
+            apellido: isFirst ? formData.apellido : '',
+            email: isFirst ? formData.email : '',
+            tipo_asistente: 'adulto',
+            restriccion_alimentaria: 'ninguna',
+            restriccion_alimentaria_detalle: ''
+          };
+        });
+        copy = [...copy, ...extra];
       } else if (count < currentCount) {
-        return prev.slice(0, count);
+        copy = copy.slice(0, count);
       }
-      return prev;
+      
+      // Asegurar que el primer asistente siempre tenga los datos del responsable
+      if (copy[0]) {
+        copy[0].nombre = formData.nombre;
+        copy[0].apellido = formData.apellido;
+        copy[0].email = formData.email;
+      }
+      return copy;
     });
   };
 
@@ -121,17 +152,25 @@ export default function Invitation() {
     
     try {
       const response = await fetch(`/api/rsvp/verify/${formData.dni.trim()}`);
+      
+      let data = null;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      }
+
       if (!response.ok) {
         if (response.status === 404) {
           setDniVerificationMessage('No se encontró registro para este DNI. Completa los datos para registrarte por primera vez.');
           setIsExistingRegistration(false);
           setHasExistingComprobante(false);
         } else {
-          const errData = await response.json();
-          throw new Error(errData.error || 'Error al verificar el registro.');
+          throw new Error(data?.error || `Error del servidor (Código ${response.status}). Por favor, intenta de nuevo más tarde.`);
         }
       } else {
-        const data = await response.json();
+        if (!data) {
+          throw new Error('Respuesta del servidor inválida (no es JSON).');
+        }
         setDniVerificationMessage('¡Registro encontrado! Puedes modificar tus datos o adjuntar un nuevo comprobante.');
         
         setFormData({
@@ -139,6 +178,7 @@ export default function Invitation() {
           nombre: data.nombre || '',
           apellido: data.apellido || '',
           telefono: data.telefono || '',
+          email: data.email || '',
           cantidad_personas: data.cantidad_personas || 1,
           modalidad_pago: data.modalidad_pago || 'ahora',
           observaciones: data.observaciones || '',
@@ -149,6 +189,7 @@ export default function Invitation() {
             id: a.id,
             nombre: a.nombre || '',
             apellido: a.apellido || '',
+            email: a.email || '',
             tipo_asistente: a.tipo_asistente || 'adulto',
             restriccion_alimentaria: a.restriccion_alimentaria || 'ninguna',
             restriccion_alimentaria_detalle: a.restriccion_alimentaria_detalle || '',
@@ -214,10 +255,38 @@ export default function Invitation() {
       return;
     }
 
+    // Asegurar sincronización del primer asistente (responsable)
+    if (asistentes[0]) {
+      asistentes[0].nombre = formData.nombre;
+      asistentes[0].apellido = formData.apellido;
+      asistentes[0].email = formData.email;
+    }
+
+    // Validación de correo electrónico del responsable
+    if (!formData.email.trim()) {
+      setErrorMessage('Por favor, ingresa tu correo electrónico.');
+      setIsSubmitting(false);
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email.trim())) {
+      setErrorMessage('Por favor, ingresa un correo electrónico de responsable válido.');
+      setIsSubmitting(false);
+      return;
+    }
+
     // Validación básica de asistentes
     const incomplete = asistentes.some(a => !a.nombre.trim() || !a.apellido.trim());
     if (incomplete) {
       setErrorMessage('Por favor, ingresa el nombre y apellido de todos los asistentes.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Validación de correos opcionales de asistentes si están cargados
+    const invalidGuestEmails = asistentes.some(a => a.email && a.email.trim() && !emailRegex.test(a.email.trim()));
+    if (invalidGuestEmails) {
+      setErrorMessage('Por favor, ingresa correos electrónicos válidos para los asistentes.');
       setIsSubmitting(false);
       return;
     }
@@ -234,6 +303,7 @@ export default function Invitation() {
       dataToSend.append('nombre', formData.nombre);
       dataToSend.append('apellido', formData.apellido);
       dataToSend.append('telefono', formData.telefono);
+      dataToSend.append('email', formData.email);
       dataToSend.append('cantidad_personas', formData.cantidad_personas);
       dataToSend.append('modalidad_pago', formData.modalidad_pago);
       dataToSend.append('importe_total', calculateTotal());
@@ -249,10 +319,18 @@ export default function Invitation() {
         body: dataToSend
       });
 
-      const data = await response.json();
+      let data = null;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Ocurrió un error al enviar tu confirmación.');
+        throw new Error(data?.error || `Error del servidor (Código ${response.status}). Por favor, intenta de nuevo más tarde.`);
+      }
+
+      if (!data) {
+        throw new Error('El servidor no devolvió una respuesta válida (no es JSON).');
       }
 
       setSuccessResponse(data);
@@ -427,11 +505,12 @@ export default function Invitation() {
                 nombre: '',
                 apellido: '',
                 telefono: '',
+                email: '',
                 cantidad_personas: 1,
                 modalidad_pago: 'ahora',
                 observaciones: '',
               });
-              setAsistentes([{ nombre: '', apellido: '', tipo_asistente: 'adulto', restriccion_alimentaria: 'ninguna', restriccion_alimentaria_detalle: '' }]);
+              setAsistentes([{ nombre: '', apellido: '', email: '', tipo_asistente: 'adulto', restriccion_alimentaria: 'ninguna', restriccion_alimentaria_detalle: '' }]);
               setComprobanteFile(null);
               setComprobantePreview(null);
               setIsExistingRegistration(false);
@@ -544,19 +623,44 @@ export default function Invitation() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Cantidad de Personas a Confirmar</label>
-                  <select 
-                    name="cantidad_personas" 
-                    value={formData.cantidad_personas} 
+                  <label className="form-label">Email del Responsable</label>
+                  <input 
+                    type="email" 
+                    name="email" 
+                    required 
+                    value={formData.email} 
                     onChange={handleInputChange} 
-                    className="form-input form-select"
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-                      <option key={n} value={n} style={{ backgroundColor: 'var(--bg-dark-tertiary)' }}>{n} {n === 1 ? 'Persona' : 'Personas'}</option>
-                    ))}
-                  </select>
+                    className="form-input" 
+                    placeholder="Ej. juan@correo.com" 
+                  />
                 </div>
               </div>
+
+              <div className="form-group">
+                <label className="form-label">Cantidad de Personas a Confirmar</label>
+                <select 
+                  name="cantidad_personas" 
+                  value={formData.cantidad_personas} 
+                  onChange={handleInputChange} 
+                  className="form-input form-select"
+                >
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => {
+                      let text = '';
+                      if (n === 1) {
+                        text = 'Voy solo (1 persona)';
+                      } else if (n === 2) {
+                        text = 'Acompañado de 1 persona (2 en total)';
+                      } else {
+                        text = `Acompañado de ${n - 1} personas (${n} en total)`;
+                      }
+                      return (
+                        <option key={n} value={n} style={{ backgroundColor: 'var(--bg-dark-tertiary)' }}>
+                          {text}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
 
               {/* Registro de Asistentes Individuales */}
               <div style={{ marginTop: '1.5rem', marginBottom: '2.5rem' }}>
@@ -572,32 +676,52 @@ export default function Invitation() {
                     padding: '1.5rem',
                     marginBottom: '1rem'
                   }}>
-                    <h4 style={{ fontSize: '1rem', color: 'var(--rose-gold-light)', marginBottom: '1rem' }}>Asistente #{idx + 1}</h4>
+                    <h4 style={{ fontSize: '1rem', color: 'var(--rose-gold-light)', marginBottom: '1rem' }}>
+                      Asistente #{idx + 1} {idx === 0 && '(Responsable)'}
+                    </h4>
                     
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                      <div className="form-group" style={{ marginBottom: '0.8rem' }}>
-                        <label className="form-label" style={{ fontSize: '0.75rem' }}>Nombre</label>
-                        <input 
-                          type="text" 
-                          required 
-                          value={asis.nombre} 
-                          onChange={(e) => handleAsistenteChange(idx, 'nombre', e.target.value)} 
-                          className="form-input" 
-                          placeholder="Nombre" 
-                        />
+                    {idx === 0 ? (
+                      <div style={{ marginBottom: '1.2rem', padding: '0.5rem 0', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                        Nombre y Apellido: <strong style={{ color: 'var(--text-primary)' }}>{formData.nombre || '(Completa arriba)'} {formData.apellido || ''}</strong>
+                        <br />
+                        Email: <strong style={{ color: 'var(--text-primary)' }}>{formData.email || '(Completa arriba)'}</strong>
                       </div>
-                      <div className="form-group" style={{ marginBottom: '0.8rem' }}>
-                        <label className="form-label" style={{ fontSize: '0.75rem' }}>Apellido</label>
-                        <input 
-                          type="text" 
-                          required 
-                          value={asis.apellido} 
-                          onChange={(e) => handleAsistenteChange(idx, 'apellido', e.target.value)} 
-                          className="form-input" 
-                          placeholder="Apellido" 
-                        />
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                        <div className="form-group" style={{ marginBottom: '0.8rem' }}>
+                          <label className="form-label" style={{ fontSize: '0.75rem' }}>Nombre</label>
+                          <input 
+                            type="text" 
+                            required 
+                            value={asis.nombre} 
+                            onChange={(e) => handleAsistenteChange(idx, 'nombre', e.target.value)} 
+                            className="form-input" 
+                            placeholder="Nombre" 
+                          />
+                        </div>
+                        <div className="form-group" style={{ marginBottom: '0.8rem' }}>
+                          <label className="form-label" style={{ fontSize: '0.75rem' }}>Apellido</label>
+                          <input 
+                            type="text" 
+                            required 
+                            value={asis.apellido} 
+                            onChange={(e) => handleAsistenteChange(idx, 'apellido', e.target.value)} 
+                            className="form-input" 
+                            placeholder="Apellido" 
+                          />
+                        </div>
+                        <div className="form-group" style={{ marginBottom: '0.8rem' }}>
+                          <label className="form-label" style={{ fontSize: '0.75rem' }}>Email (Opcional)</label>
+                          <input 
+                            type="email" 
+                            value={asis.email || ''} 
+                            onChange={(e) => handleAsistenteChange(idx, 'email', e.target.value)} 
+                            className="form-input" 
+                            placeholder="Email" 
+                          />
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                       <div className="form-group" style={{ marginBottom: '0' }}>

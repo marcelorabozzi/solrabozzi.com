@@ -97,11 +97,16 @@ app.get('/api/rsvp/verify/:dni', async (req, res) => {
 // Endpoint para guardar RSVP o actualizar (admite subida de archivo opcional)
 app.post('/api/rsvp', upload.single('comprobante'), async (req, res) => {
   try {
-    const { dni, nombre, apellido, telefono, cantidad_personas, modalidad_pago, importe_total, observaciones, asistentes } = req.body;
+    const { dni, nombre, apellido, telefono, email, cantidad_personas, modalidad_pago, importe_total, observaciones, asistentes } = req.body;
 
     // Validaciones básicas de datos obligatorios (RNF-010)
-    if (!dni || !nombre || !apellido || !telefono || !cantidad_personas || !modalidad_pago || !importe_total) {
+    if (!dni || !nombre || !apellido || !telefono || !email || !cantidad_personas || !modalidad_pago || !importe_total) {
       return res.status(400).json({ error: 'Faltan campos obligatorios para registrar la asistencia.' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'El correo electrónico ingresado no es válido.' });
     }
 
     let parsedAsistentes = [];
@@ -129,6 +134,7 @@ app.post('/api/rsvp', upload.single('comprobante'), async (req, res) => {
         nombre,
         apellido,
         telefono,
+        email,
         cantidad_personas,
         modalidad_pago,
         importe_total,
@@ -154,6 +160,7 @@ app.post('/api/rsvp', upload.single('comprobante'), async (req, res) => {
         nombre,
         apellido,
         telefono,
+        email,
         cantidad_personas,
         modalidad_pago,
         importe_total,
@@ -270,13 +277,14 @@ app.get('/api/admin/rsvps/export/csv', authenticateAdmin, async (req, res) => {
     const rsvps = await db.getAllInvitaciones();
     
     // Encabezados
-    let csvContent = 'ID_Invitacion;DNI;Responsable;Telefono;Cant_Asistentes;Importe_Total;Modalidad_Pago;Estado_Pago;Estado_Asistencia;Nombre_Asistente;Apellido_Asistente;Tipo_Asistente;Restriccion_Alimentaria;Restriccion_Detalle;Mesa\n';
+    let csvContent = 'ID_Invitacion;DNI;Responsable;Telefono;Email_Responsable;Cant_Asistentes;Importe_Total;Modalidad_Pago;Estado_Pago;Estado_Asistencia;Nombre_Asistente;Apellido_Asistente;Email_Asistente;Tipo_Asistente;Restriccion_Alimentaria;Restriccion_Detalle;Mesa\n';
 
     rsvps.forEach(rsvp => {
       const responsable = `"${rsvp.nombre} ${rsvp.apellido}"`;
       const id = rsvp.id;
       const dni = rsvp.dni || '';
       const tel = `"${rsvp.telefono}"`;
+      const emailResponsable = `"${rsvp.email || ''}"`;
       const cant = rsvp.cantidad_personas;
       const total = rsvp.importe_total;
       const mod = rsvp.modalidad_pago;
@@ -285,11 +293,11 @@ app.get('/api/admin/rsvps/export/csv', authenticateAdmin, async (req, res) => {
 
       if (rsvp.asistentes && rsvp.asistentes.length > 0) {
         rsvp.asistentes.forEach(asis => {
-          csvContent += `${id};${dni};${responsable};${tel};${cant};${total};${mod};${estPago};${estAsis};"${asis.nombre}";"${asis.apellido}";"${asis.tipo_asistente}";"${asis.restriccion_alimentaria}";"${asis.restriccion_alimentaria_detalle || ''}";"${asis.mesa || ''}"\n`;
+          csvContent += `${id};${dni};${responsable};${tel};${emailResponsable};${cant};${total};${mod};${estPago};${estAsis};"${asis.nombre}";"${asis.apellido}";"${asis.email || ''}";"${asis.tipo_asistente}";"${asis.restriccion_alimentaria}";"${asis.restriccion_alimentaria_detalle || ''}";"${asis.mesa || ''}"\n`;
         });
       } else {
         // En caso de que no haya asistentes guardados en detalle por algún motivo
-        csvContent += `${id};${dni};${responsable};${tel};${cant};${total};${mod};${estPago};${estAsis};;;;;\n`;
+        csvContent += `${id};${dni};${responsable};${tel};${emailResponsable};${cant};${total};${mod};${estPago};${estAsis};;;;;;;\n`;
       }
     });
 
