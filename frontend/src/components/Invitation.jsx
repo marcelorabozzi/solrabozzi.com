@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import solPortrait from '../assets/sol_portrait.png';
 
 export default function Invitation() {
   const [formData, setFormData] = useState({
@@ -292,7 +293,7 @@ export default function Invitation() {
             overflow: 'hidden',
             transition: 'transform 0.5s ease'
           }} className="zoom-portrait">
-            <img src="/sol_portrait.png" alt="Sol Rabozzi" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={solPortrait} alt="Sol Rabozzi" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
 
           <p style={{ fontStyle: 'italic', fontSize: '1.4rem', fontFamily: 'var(--font-serif)', color: 'var(--rose-gold-light)', marginBottom: '2.5rem' }}>
