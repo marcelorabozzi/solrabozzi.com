@@ -25,6 +25,69 @@
   /* Fuentes */
   --font-serif: 'Cormorant Garamond', Georgia, serif;
   --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Theme variables defaults */
+  --hero-overlay: linear-gradient(rgba(10, 4, 11, 0.75), rgba(10, 4, 11, 0.95));
+  --glass-bg-accent: rgba(31, 13, 34, 0.3);
+  --bank-card-bg: rgba(20, 8, 22, 0.9);
+}
+
+/* Modo Claro - Rose Gold & Light Elegance */
+body[data-theme="light"] {
+  --bg-dark-primary: #fbf8fb;
+  --bg-dark-secondary: #f5edf5;
+  --bg-dark-tertiary: #ebdfeb;
+  
+  --rose-gold: #c68686;
+  --rose-gold-hover: #b87373;
+  --rose-gold-dark: #8c4e4e;
+  --rose-gold-light: #5a3c42;
+  
+  --gold: #b38f1d;
+  --gold-hover: #9e7d16;
+  
+  --text-primary: #221424;
+  --text-secondary: #4a344d;
+  --text-muted: #806883;
+
+  --glass-bg: rgba(245, 237, 245, 0.75);
+  --glass-bg-hover: rgba(235, 223, 235, 0.85);
+  --glass-border: rgba(198, 134, 134, 0.25);
+  --glass-border-focus: rgba(198, 134, 134, 0.5);
+  --shadow-premium: 0 15px 35px rgba(74, 52, 77, 0.1), 0 5px 15px rgba(198, 134, 134, 0.05);
+
+  --hero-overlay: linear-gradient(rgba(251, 248, 251, 0.45), rgba(251, 248, 251, 0.65));
+  --glass-bg-accent: rgba(235, 223, 235, 0.4);
+  --bank-card-bg: rgba(255, 255, 255, 0.95);
+}
+
+/* Modo Fiesta - Brazil */
+body[data-theme="party"] {
+  --bg-dark-primary: #e8f5e9; /* soft green background */
+  --bg-dark-secondary: #c8e6c9;
+  --bg-dark-tertiary: #a5d6a7;
+
+  --rose-gold: #009739;            /* verde bandera */
+  --rose-gold-hover: #00a84d;
+  --rose-gold-dark: #007a2e;
+  --rose-gold-light: #c5e1a5;
+
+  --gold: #ffcc00;                 /* amarillo */
+  --gold-hover: #e6b800;
+
+  --text-primary: #001f3f;        /* azul oscuro */
+  --text-secondary: #003366;
+  --text-muted: #00509e;
+
+  --glass-bg: rgba(255,255,255,0.8);
+  --glass-bg-hover: rgba(255,255,255,0.9);
+  --glass-border: rgba(255,204,0,0.3);
+  --glass-border-focus: rgba(255,204,0,0.5);
+  --shadow-premium: 0 15px 35px rgba(0,0,0,0.2), 0 5px 15px rgba(255,204,0,0.1);
+
+  --hero-overlay: linear-gradient(rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.65));
+  --glass-bg-accent: rgba(255,255,255,0.5);
+  --bank-card-bg: rgba(255, 255, 255, 0.95);
 }
 
 * {
@@ -496,4 +559,61 @@ p {
   .countdown-label {
     font-size: 0.6rem;
   }
+}
+
+/* --- ESTILOS DE SOBRESCRITURA MODO CLARO --- */
+body[data-theme="light"] {
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(198, 134, 134, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(179, 143, 29, 0.05) 0%, transparent 45%);
+}
+
+body[data-theme="light"] .form-input {
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--text-primary);
+  border: 1px solid rgba(198, 134, 134, 0.3);
+}
+
+body[data-theme="light"] .form-input:focus {
+  background: #ffffff;
+  border-color: var(--rose-gold);
+  box-shadow: 0 0 10px rgba(198, 134, 134, 0.2);
+}
+
+body[data-theme="light"] .upload-dropzone {
+  border-color: rgba(198, 134, 134, 0.4);
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--text-secondary);
+}
+
+body[data-theme="light"] .countdown-box {
+  border-color: rgba(198, 134, 134, 0.25);
+}
+
+/* Tarjetas de Asistentes individuales */
+.assistant-card {
+  background: rgba(20, 8, 22, 0.4);
+  border: 1px solid rgba(226, 165, 165, 0.08);
+  transition: all 0.3s ease;
+}
+
+body[data-theme="light"] .assistant-card {
+  background: rgba(255, 255, 255, 0.55);
+  border-color: rgba(198, 134, 134, 0.12);
+  box-shadow: 0 4px 12px rgba(74, 52, 77, 0.03);
+}
+
+/* Portada Hero Section */
+.hero-section {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem 1rem;
+  overflow: hidden;
+  background: var(--hero-overlay), url("/ballroom_bg.png") center/cover no-repeat fixed;
+  background-color: var(--bg-dark-primary);
 }

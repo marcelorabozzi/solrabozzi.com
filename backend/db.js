@@ -8,6 +8,7 @@ let mongoose = null;
 let InvitationModel = null;
 let AssistentModel = null;
 let AdminModel = null;
+let SettingsModel = null;
 
 // Inicialización del sistema de persistencia (Exclusivo MongoDB)
 async function init() {
@@ -62,9 +63,15 @@ async function init() {
       fecha_creacion: { type: Date, default: Date.now }
     });
 
+    const SettingsSchema = new mongoose.Schema({
+      key: { type: String, required: true, unique: true },
+      value: { type: String, required: true }
+    });
+
     InvitationModel = mongoose.model('Invitation', InvitationSchema);
     AssistentModel = mongoose.model('Assistent', AssistentSchema);
     AdminModel = mongoose.model('Admin', AdminSchema);
+    SettingsModel = mongoose.model('Settings', SettingsSchema);
 
     // Sembrar administrador por defecto automáticamente
     await seedAdmin('marcelo', 'ss151100**');
@@ -100,6 +107,24 @@ async function verifyAdmin(username, password) {
   if (!admin) return false;
   const passwordHash = hashPassword(password);
   return admin.passwordHash === passwordHash;
+}
+
+// Obtener tema actual
+async function getThemeSetting() {
+  if (!SettingsModel) return 'dark';
+  const setting = await SettingsModel.findOne({ key: 'theme' }).lean();
+  return setting ? setting.value : 'dark';
+}
+
+// Guardar tema actual
+async function setThemeSetting(themeValue) {
+  if (!SettingsModel) throw new Error('Base de datos no inicializada');
+  const result = await SettingsModel.findOneAndUpdate(
+    { key: 'theme' },
+    { value: themeValue },
+    { new: true, upsert: true }
+  );
+  return result;
 }
 
 // API de Base de Datos
@@ -307,5 +332,7 @@ module.exports = {
   addComprobante,
   getStats,
   verifyAdmin,
-  updateAdminPassword
+  updateAdminPassword,
+  getThemeSetting,
+  setThemeSetting
 };

@@ -15,6 +15,9 @@ export default function AdminPanel() {
   const [changePasswordError, setChangePasswordError] = useState('');
   const [changePasswordSuccess, setChangePasswordSuccess] = useState('');
   
+  // Tema visual actual
+  const [currentTheme, setCurrentTheme] = useState('dark');
+  
   // Datos del Dashboard
   const [rsvps, setRsvps] = useState([]);
   const [stats, setStats] = useState({
@@ -45,6 +48,18 @@ export default function AdminPanel() {
       fetchDashboardData();
     }
   }, [token]);
+
+  // Cargar tema inicial
+  useEffect(() => {
+    fetch('/api/settings/theme')
+      .then(res => res.json())
+      .then(data => {
+        if (data.theme) {
+          setCurrentTheme(data.theme);
+        }
+      })
+      .catch(err => console.error('Error fetching theme in admin:', err));
+  }, []);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -179,6 +194,37 @@ export default function AdminPanel() {
       }, 2000);
     } catch (err) {
       setChangePasswordError(err.message);
+    }
+  };
+
+  const toggleTheme = async (selectedTheme) => {
+    console.log('Attempting to change theme to:', selectedTheme || (currentTheme === 'light' ? 'dark' : 'light'));
+    // If a specific theme is provided (e.g., from the dropdown), use it; otherwise toggle between light/dark.
+    const nextTheme = selectedTheme || (currentTheme === 'light' ? 'dark' : 'light');
+    try {
+      const res = await fetch('/api/admin/settings/theme', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ theme: nextTheme })
+      });
+
+      let data = null;
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await res.json();
+      }
+
+      if (!res.ok) {
+        throw new Error(data?.error || 'Error al actualizar el tema.');
+      }
+
+      setCurrentTheme(nextTheme);
+      document.body.setAttribute('data-theme', nextTheme);
+    } catch (err) {
+      alert(err.message);
     }
   };
 
@@ -354,6 +400,11 @@ export default function AdminPanel() {
             <button onClick={handleExportCSV} className="btn-premium btn-gold" style={{ fontSize: '0.85rem', padding: '0.6rem 1.5rem' }}>
               📥 Exportar Lista (CSV)
             </button>
+            <select value={currentTheme} onChange={(e) => toggleTheme(e.target.value)} className="form-input" style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}>
+                <option value="dark">🌙 Modo Noche</option>
+                <option value="light">☀️ Modo Claro</option>
+                <option value="party">🎉 Modo Fiesta</option>
+              </select>
             <button onClick={() => setIsChangingPassword(true)} className="btn-premium btn-secondary" style={{ fontSize: '0.85rem', padding: '0.6rem 1.5rem' }}>
               🔑 Cambiar Contraseña
             </button>

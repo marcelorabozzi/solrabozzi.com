@@ -352,19 +352,9 @@ export default function Invitation() {
   return (
     <div style={{ position: 'relative', width: '100%' }}>
       {/* Portada elegante y hero */}
-      <section style={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
-        padding: '2rem 1rem',
-        background: `linear-gradient(rgba(10, 4, 11, 0.75), rgba(10, 4, 11, 0.95)), url("/ballroom_bg.png") center/cover no-repeat fixed`,
-        position: 'relative'
-      }}>
+      <section className="hero-section">
         <div className="sparkles"></div>
-        <div className="animated-fade-in" style={{ maxWidth: '1100px', zIndex: 2, width: '100%' }}>
+        <div className="animated-fade-in" style={{ maxWidth: '1100px', width: '100%' }}>
           <h2 style={{ fontSize: '1.8rem', letterSpacing: '4px', color: 'var(--rose-gold)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Mis 15 Años</h2>
           <h1 style={{ fontSize: '4.5rem', fontFamily: 'var(--font-serif)', color: 'var(--text-primary)', margin: '0 0 2rem 0', textShadow: '0 0 20px rgba(226,165,165,0.3)' }}>Sol Rabozzi</h1>
           
@@ -679,9 +669,7 @@ export default function Invitation() {
                 </h3>
                 
                 {asistentes.map((asis, idx) => (
-                  <div key={idx} className="animated-fade-in" style={{
-                    background: 'rgba(20, 8, 22, 0.4)',
-                    border: '1px solid rgba(226,165,165,0.08)',
+                  <div key={idx} className="animated-fade-in assistant-card" style={{
                     borderRadius: '12px',
                     padding: '1.5rem',
                     marginBottom: '1rem'
@@ -780,7 +768,7 @@ export default function Invitation() {
               </div>
 
               {/* Importe y Forma de Pago */}
-              <div className="panel-glass" style={{ background: 'rgba(31, 13, 34, 0.3)', marginBottom: '2.5rem', padding: '1.5rem' }}>
+              <div className="panel-glass" style={{ background: 'var(--glass-bg-accent, rgba(31, 13, 34, 0.3))', marginBottom: '2.5rem', padding: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                   <span style={{ fontSize: '1.2rem', color: 'var(--rose-gold-light)' }}>Importe Total a Pagar:</span>
                   <strong style={{ fontSize: '2.2rem', fontFamily: 'var(--font-serif)', color: 'var(--gold)' }}>
@@ -822,7 +810,7 @@ export default function Invitation() {
 
               {/* Sección de Datos de Transferencia y Carga (Si se selecciona Pagar Ahora) */}
               {formData.modalidad_pago === 'ahora' && (
-                <div className="panel-glass animated-fade-in" style={{ background: 'rgba(20, 8, 22, 0.9)', marginBottom: '2.5rem', padding: '1.5rem', border: '1px dashed var(--rose-gold)' }}>
+                <div className="panel-glass animated-fade-in" style={{ background: 'var(--bank-card-bg, rgba(20, 8, 22, 0.9))', marginBottom: '2.5rem', padding: '1.5rem', border: '1px dashed var(--rose-gold)' }}>
                   <h4 style={{ fontSize: '1.1rem', color: 'var(--rose-gold)', marginBottom: '1.2rem' }}>Datos Bancarios para Transferencia</h4>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', marginBottom: '1.5rem', fontSize: '0.95rem' }}>

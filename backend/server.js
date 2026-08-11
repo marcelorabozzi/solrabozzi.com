@@ -342,6 +342,34 @@ app.post('/api/admin/change-password', authenticateAdmin, async (req, res) => {
   }
 });
 
+// Obtener tema actual (Público)
+app.get('/api/settings/theme', async (req, res) => {
+  try {
+    const theme = await db.getThemeSetting();
+    res.json({ theme });
+  } catch (err) {
+    console.error('Error al obtener tema:', err);
+    res.status(500).json({ error: 'Error al obtener configuración del tema.' });
+  }
+});
+
+// Cambiar tema de la página (Administrativo Autenticado)
+app.post('/api/admin/settings/theme', authenticateAdmin, async (req, res) => {
+  try {
+    const { theme } = req.body;
+    console.log('Received theme update request:', req.body);
+    // Allow 'party' theme in addition to dark and light
+    if (theme !== 'dark' && theme !== 'light' && theme !== 'party') {
+      return res.status(400).json({ error: 'Tema inválido. Debe ser "dark", "light" o "party".' });
+    }
+    await db.setThemeSetting(theme);
+    res.json({ success: true, theme });
+  } catch (err) {
+    console.error('Error al cambiar tema:', err);
+    res.status(500).json({ error: 'Error al guardar configuración del tema.' });
+  }
+});
+
 // Middleware global para manejo de errores de Multer
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {

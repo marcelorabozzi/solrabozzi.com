@@ -6,6 +6,17 @@ function App() {
   const [currentView, setCurrentView] = useState('invitation');
 
   useEffect(() => {
+    fetch('/api/settings/theme')
+      .then(res => res.json())
+      .then(data => {
+        if (data.theme) {
+          document.body.setAttribute('data-theme', data.theme);
+        }
+      })
+      .catch(err => console.error('Error al obtener tema:', err));
+  }, []);
+
+  useEffect(() => {
     // Escuchar cambios de hash en la URL
     const handleHashChange = () => {
       const hash = window.location.hash;
