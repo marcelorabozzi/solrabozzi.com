@@ -26,6 +26,7 @@ export default function Invitation() {
   const [comprobantePreview, setComprobantePreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedAlias, setCopiedAlias] = useState(false);
+  const [copiedCbu, setCopiedCbu] = useState(false);
   const [successResponse, setSuccessResponse] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -220,6 +221,13 @@ export default function Invitation() {
     setTimeout(() => setCopiedAlias(false), 3000);
   };
 
+  // Copiar CBU al portapapeles
+  const handleCopyCbu = () => {
+    navigator.clipboard.writeText('0200902911000001775312');
+    setCopiedCbu(true);
+    setTimeout(() => setCopiedCbu(false), 3000);
+  };
+
   // Manejar carga del archivo comprobante
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -356,52 +364,54 @@ export default function Invitation() {
         position: 'relative'
       }}>
         <div className="sparkles"></div>
-        <div className="animated-fade-in" style={{ maxWidth: '650px', zIndex: 2 }}>
+        <div className="animated-fade-in" style={{ maxWidth: '1100px', zIndex: 2, width: '100%' }}>
           <h2 style={{ fontSize: '1.8rem', letterSpacing: '4px', color: 'var(--rose-gold)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Mis 15 Años</h2>
-          <h1 style={{ fontSize: '4.5rem', fontFamily: 'var(--font-serif)', color: 'var(--text-primary)', margin: '0 0 1.5rem 0', textShadow: '0 0 20px rgba(226,165,165,0.3)' }}>Sol Rabozzi</h1>
+          <h1 style={{ fontSize: '4.5rem', fontFamily: 'var(--font-serif)', color: 'var(--text-primary)', margin: '0 0 2rem 0', textShadow: '0 0 20px rgba(226,165,165,0.3)' }}>Sol Rabozzi</h1>
           
-          {/* Foto principal de Sol en un círculo dorado brillante */}
-          <div style={{
-            width: '240px',
-            height: '240px',
-            borderRadius: '50%',
-            margin: '0 auto 2rem auto',
-            border: '3px solid var(--rose-gold)',
-            boxShadow: '0 0 30px rgba(226, 165, 165, 0.4), inset 0 0 20px rgba(0,0,0,0.8)',
-            overflow: 'hidden',
-            transition: 'transform 0.5s ease'
-          }} className="zoom-portrait">
-            <img src={solPortrait} alt="Sol Rabozzi" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          </div>
+          <div className="hero-layout">
+            {/* Contador de cuenta regresiva */}
+            <div className="hero-countdown-wrapper">
+              <h3 className="hero-countdown-title">Falta muy poco...</h3>
+              <div className="countdown-container hero-countdown">
+                <div className="countdown-box">
+                  <span className="countdown-num">{countdown.days}</span>
+                  <span className="countdown-label">Días</span>
+                </div>
+                <div className="countdown-box">
+                  <span className="countdown-num">{countdown.hours}</span>
+                  <span className="countdown-label">Hs</span>
+                </div>
+                <div className="countdown-box">
+                  <span className="countdown-num">{countdown.minutes}</span>
+                  <span className="countdown-label">Min</span>
+                </div>
+                <div className="countdown-box">
+                  <span className="countdown-num">{countdown.seconds}</span>
+                  <span className="countdown-label">Seg</span>
+                </div>
+              </div>
+            </div>
 
-          <p style={{ fontStyle: 'italic', fontSize: '1.4rem', fontFamily: 'var(--font-serif)', color: 'var(--rose-gold-light)', marginBottom: '2.5rem' }}>
-            "Hay momentos que son inolvidables, pero compartirlos con quienes más queremos los hace eternos. Te invito a celebrar conmigo esta noche mágica."
-          </p>
+            {/* Foto principal de Sol en un círculo dorado brillante */}
+            <div style={{
+              width: '240px',
+              height: '240px',
+              borderRadius: '50%',
+              border: '3px solid var(--rose-gold)',
+              boxShadow: '0 0 30px rgba(226, 165, 165, 0.4), inset 0 0 20px rgba(0,0,0,0.8)',
+              overflow: 'hidden',
+              transition: 'transform 0.5s ease',
+              flexShrink: 0
+            }} className="zoom-portrait">
+              <img src={solPortrait} alt="Sol Rabozzi" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+
+            <p className="hero-quote">
+              "Hay momentos que son inolvidables, pero compartirlos con quienes más queremos los hace eternos. Te invito a celebrar conmigo esta noche mágica."
+            </p>
+          </div>
 
           <a href="#confirmar" className="btn-premium btn-primary">Confirmar Asistencia</a>
-        </div>
-      </section>
-
-      {/* Contador de cuenta regresiva */}
-      <section style={{ padding: '4rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'var(--bg-dark-secondary)' }}>
-        <h3 style={{ fontSize: '1.8rem', color: 'var(--rose-gold)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '1rem' }}>Falta muy poco...</h3>
-        <div className="countdown-container">
-          <div className="countdown-box">
-            <span className="countdown-num">{countdown.days}</span>
-            <span className="countdown-label">Días</span>
-          </div>
-          <div className="countdown-box">
-            <span className="countdown-num">{countdown.hours}</span>
-            <span className="countdown-label">Hs</span>
-          </div>
-          <div className="countdown-box">
-            <span className="countdown-num">{countdown.minutes}</span>
-            <span className="countdown-label">Min</span>
-          </div>
-          <div className="countdown-box">
-            <span className="countdown-num">{countdown.seconds}</span>
-            <span className="countdown-label">Seg</span>
-          </div>
         </div>
       </section>
 
@@ -813,20 +823,35 @@ export default function Invitation() {
               {/* Sección de Datos de Transferencia y Carga (Si se selecciona Pagar Ahora) */}
               {formData.modalidad_pago === 'ahora' && (
                 <div className="panel-glass animated-fade-in" style={{ background: 'rgba(20, 8, 22, 0.9)', marginBottom: '2.5rem', padding: '1.5rem', border: '1px dashed var(--rose-gold)' }}>
-                  <h4 style={{ fontSize: '1.1rem', color: 'var(--rose-gold)', marginBottom: '1rem' }}>Datos Bancarios para Transferencia</h4>
+                  <h4 style={{ fontSize: '1.1rem', color: 'var(--rose-gold)', marginBottom: '1.2rem' }}>Datos Bancarios para Transferencia</h4>
                   
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-                    <div>
-                      <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Titular</span>
-                      <strong style={{ color: 'var(--text-primary)' }}>Marcelo Juan Rabozzi</strong>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(226,165,165,0.08)', paddingBottom: '0.6rem' }}>
+                      <div>
+                        <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Titular</span>
+                        <strong style={{ color: 'var(--text-primary)' }}>Marcelo Juan Rabozzi</strong>
+                      </div>
+                      <img src="/banco.png" alt="Bancor" style={{ height: '28px', objectFit: 'contain', opacity: 0.9 }} />
                     </div>
-                    <div>
-                      <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase' }}>CBU</span>
-                      <strong style={{ color: 'var(--text-primary)' }}>0170123456789012345678</strong>
+                    
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(226,165,165,0.08)', paddingBottom: '0.6rem' }}>
+                      <div>
+                        <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>CBU</span>
+                        <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace', letterSpacing: '0.5px' }}>0200902911000001775312</strong>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={handleCopyCbu} 
+                        className="btn-premium btn-secondary" 
+                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.7rem', letterSpacing: '0.5px' }}
+                      >
+                        {copiedCbu ? '¡Copiado!' : 'Copiar CBU'}
+                      </button>
                     </div>
+                    
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Alias Bancario</span>
+                        <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Alias Bancario</span>
                         <strong style={{ color: 'var(--gold)' }}>sol.15.rabozzi</strong>
                       </div>
                       <button 
@@ -835,7 +860,7 @@ export default function Invitation() {
                         className="btn-premium btn-secondary" 
                         style={{ padding: '0.4rem 0.8rem', fontSize: '0.7rem', letterSpacing: '0.5px' }}
                       >
-                        {copiedAlias ? '¡Copiado!' : 'Copiar'}
+                        {copiedAlias ? '¡Copiado!' : 'Copiar Alias'}
                       </button>
                     </div>
                   </div>

@@ -2,9 +2,18 @@ import React, { useState, useEffect } from 'react';
 
 export default function AdminPanel() {
   const [token, setToken] = useState(localStorage.getItem('adminToken') || '');
+  const [loggedInUser, setLoggedInUser] = useState(localStorage.getItem('adminUsername') || '');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+
+  // Cambiar contraseña modal
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changePasswordError, setChangePasswordError] = useState('');
+  const [changePasswordSuccess, setChangePasswordSuccess] = useState('');
   
   // Datos del Dashboard
   const [rsvps, setRsvps] = useState([]);
@@ -111,7 +120,9 @@ export default function AdminPanel() {
       }
 
       localStorage.setItem('adminToken', data.token);
+      localStorage.setItem('adminUsername', username);
       setToken(data.token);
+      setLoggedInUser(username);
     } catch (err) {
       setLoginError(err.message);
     }
@@ -119,10 +130,56 @@ export default function AdminPanel() {
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUsername');
     setToken('');
+    setLoggedInUser('');
     setRsvps([]);
     setSelectedRsvp(null);
     setIsViewingComprobante(false);
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setChangePasswordError('');
+    setChangePasswordSuccess('');
+
+    if (newPassword !== confirmPassword) {
+      setChangePasswordError('La nueva contraseña y la confirmación no coinciden.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/admin/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+
+      let data = null;
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await res.json();
+      }
+
+      if (!res.ok) {
+        throw new Error(data?.error || 'Error al cambiar la contraseña.');
+      }
+
+      setChangePasswordSuccess('¡Contraseña cambiada exitosamente!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      
+      setTimeout(() => {
+        setIsChangingPassword(false);
+        setChangePasswordSuccess('');
+      }, 2000);
+    } catch (err) {
+      setChangePasswordError(err.message);
+    }
   };
 
   // Verificar pago de una invitación (RF-046)
@@ -289,13 +346,18 @@ export default function AdminPanel() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
           <div>
             <h1 style={{ fontSize: '2.5rem', color: 'var(--rose-gold)' }}>Gestión de Asistencia</h1>
-            <p style={{ color: 'var(--text-muted)' }}>Mis 15 – Sol Rabozzi</p>
+            <p style={{ color: 'var(--text-muted)' }}>
+              Mis 15 – Sol Rabozzi • <strong style={{ color: 'var(--rose-gold-light)' }}>Sesión: {loggedInUser}</strong>
+            </p>
           </div>
-          <div style={{ display: 'flex', gap: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
             <button onClick={handleExportCSV} className="btn-premium btn-gold" style={{ fontSize: '0.85rem', padding: '0.6rem 1.5rem' }}>
               📥 Exportar Lista (CSV)
             </button>
-            <button onClick={handleLogout} className="btn-premium btn-secondary" style={{ fontSize: '0.85rem', padding: '0.6rem 1.5rem' }}>
+            <button onClick={() => setIsChangingPassword(true)} className="btn-premium btn-secondary" style={{ fontSize: '0.85rem', padding: '0.6rem 1.5rem' }}>
+              🔑 Cambiar Contraseña
+            </button>
+            <button onClick={handleLogout} className="btn-premium btn-secondary" style={{ fontSize: '0.85rem', padding: '0.6rem 1.5rem', color: '#fca5a5', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
               Cerrar Sesión
             </button>
           </div>
@@ -679,6 +741,116 @@ export default function AdminPanel() {
               )}
             </div>
 
+          </div>
+        )}
+
+        {/* Modal para cambiar contraseña */}
+        {isChangingPassword && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 150,
+            padding: '1rem'
+          }} onClick={() => setIsChangingPassword(false)}>
+            <div className="panel-glass animated-fade-in" style={{
+              maxWidth: '420px',
+              width: '100%',
+              border: '1px solid var(--rose-gold)',
+              boxShadow: '0 0 30px rgba(226,165,165,0.2)'
+            }} onClick={(e) => e.stopPropagation()}>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.6rem', color: 'var(--rose-gold)' }}>Cambiar Contraseña</h3>
+                <button 
+                  onClick={() => setIsChangingPassword(false)} 
+                  style={{ background: 'none', border: 'none', color: 'var(--rose-gold-light)', fontSize: '1.5rem', cursor: 'pointer' }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleChangePassword}>
+                <div className="form-group">
+                  <label className="form-label">Contraseña Actual</label>
+                  <input 
+                    type="password" 
+                    required 
+                    value={currentPassword} 
+                    onChange={(e) => setCurrentPassword(e.target.value)} 
+                    className="form-input" 
+                    placeholder="Ingresa la contraseña actual" 
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label className="form-label">Nueva Contraseña</label>
+                  <input 
+                    type="password" 
+                    required 
+                    value={newPassword} 
+                    onChange={(e) => setNewPassword(e.target.value)} 
+                    className="form-input" 
+                    placeholder="Ingresa la nueva contraseña" 
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Confirmar Nueva Contraseña</label>
+                  <input 
+                    type="password" 
+                    required 
+                    value={confirmPassword} 
+                    onChange={(e) => setConfirmPassword(e.target.value)} 
+                    className="form-input" 
+                    placeholder="Repite la nueva contraseña" 
+                  />
+                </div>
+
+                {changePasswordError && (
+                  <div style={{
+                    color: '#fca5a5',
+                    fontSize: '0.85rem',
+                    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    padding: '0.8rem',
+                    borderRadius: '8px',
+                    marginBottom: '1.5rem'
+                  }}>
+                    ⚠️ {changePasswordError}
+                  </div>
+                )}
+
+                {changePasswordSuccess && (
+                  <div style={{
+                    color: '#a3e635',
+                    fontSize: '0.85rem',
+                    backgroundColor: 'rgba(46, 125, 50, 0.15)',
+                    border: '1px solid rgba(163, 230, 53, 0.3)',
+                    padding: '0.8rem',
+                    borderRadius: '8px',
+                    marginBottom: '1.5rem'
+                  }}>
+                    ✓ {changePasswordSuccess}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+                  <button type="button" onClick={() => setIsChangingPassword(false)} className="btn-premium btn-secondary" style={{ flex: 1 }}>
+                    Cancelar
+                  </button>
+                  <button type="submit" className="btn-premium btn-primary" style={{ flex: 1 }}>
+                    Guardar
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
 

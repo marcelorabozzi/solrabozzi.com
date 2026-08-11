@@ -1,151 +1,121 @@
-const fs = require('fs');
-const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 // Variables de entorno
 const MONGODB_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/mis15';
-let DATABASE_TYPE = process.env.DATABASE_TYPE || (process.env.MONGO_URI || process.env.MONGODB_URI ? 'mongodb' : 'json');
 
 let mongoose = null;
 let InvitationModel = null;
 let AssistentModel = null;
+let AdminModel = null;
 
-// Ruta del archivo JSON si estamos en modo JSON
-const jsonDbDir = path.join(__dirname, 'data');
-const jsonDbFile = path.join(jsonDbDir, 'db.json');
-
-// Estructura inicial para base de datos JSON
-const initialJsonStructure = {
-  invitaciones: [],
-  asistentes: []
-};
-
-// Función para leer base de datos JSON
-async function readJsonDb() {
-  try {
-    if (!fs.existsSync(jsonDbFile)) {
-      if (!fs.existsSync(jsonDbDir)) {
-        fs.mkdirSync(jsonDbDir, { recursive: true });
-      }
-      await fs.promises.writeFile(jsonDbFile, JSON.stringify(initialJsonStructure, null, 2), 'utf-8');
-      return initialJsonStructure;
-    }
-    const data = await fs.promises.readFile(jsonDbFile, 'utf-8');
-    return JSON.parse(data);
-  } catch (err) {
-    console.error('Error leyendo base de datos JSON:', err);
-    return initialJsonStructure;
-  }
-}
-
-// Función para escribir base de datos JSON
-async function writeJsonDb(data) {
-  try {
-    if (!fs.existsSync(jsonDbDir)) {
-      fs.mkdirSync(jsonDbDir, { recursive: true });
-    }
-    await fs.promises.writeFile(jsonDbFile, JSON.stringify(data, null, 2), 'utf-8');
-  } catch (err) {
-    console.error('Error escribiendo base de datos JSON:', err);
-  }
-}
-
-// Inicialización del sistema de persistencia
+// Inicialización del sistema de persistencia (Exclusivo MongoDB)
 async function init() {
-  if (DATABASE_TYPE === 'mongodb') {
-    try {
-      mongoose = require('mongoose');
-      await mongoose.connect(MONGODB_URI);
-      console.log('Conectado exitosamente a MongoDB');
+  try {
+    mongoose = require('mongoose');
+    await mongoose.connect(MONGODB_URI);
+    console.log('Conectado exitosamente a MongoDB');
 
-      // Definición de Schemas Mongoose
-      const InvitationSchema = new mongoose.Schema({
-        id: { type: String, required: true, unique: true },
-        dni: { type: String, required: true, unique: true },
-        nombre: { type: String, required: true },
-        apellido: { type: String, required: true },
-        telefono: { type: String, required: true },
-        email: { type: String, required: true },
-        cantidad_personas: { type: Number, required: true },
-        fecha_confirmacion: { type: Date, default: Date.now },
-        modalidad_pago: { type: String, enum: ['ahora', 'despues'], required: true },
-        estado_asistencia: { type: String, default: 'confirmado' },
-        estado_pago: { type: String, enum: ['pendiente', 'a_verificar', 'verificado'], default: 'pendiente' },
-        importe_total: { type: Number, required: true },
-        observaciones: { type: String, default: '' },
-        comprobante: {
-          archivo: { type: String, default: '' },
-          tipo_archivo: { type: String, default: '' },
-          fecha_carga: { type: Date }
-        },
-        fecha_creacion: { type: Date, default: Date.now },
-        fecha_actualizacion: { type: Date, default: Date.now }
-      });
+    // Definición de Schemas Mongoose
+    const InvitationSchema = new mongoose.Schema({
+      id: { type: String, required: true, unique: true },
+      dni: { type: String, required: true, unique: true },
+      nombre: { type: String, required: true },
+      apellido: { type: String, required: true },
+      telefono: { type: String, required: true },
+      email: { type: String, required: true },
+      cantidad_personas: { type: Number, required: true },
+      fecha_confirmacion: { type: Date, default: Date.now },
+      modalidad_pago: { type: String, enum: ['ahora', 'despues'], required: true },
+      estado_asistencia: { type: String, default: 'confirmado' },
+      estado_pago: { type: String, enum: ['pendiente', 'a_verificar', 'verificado'], default: 'pendiente' },
+      importe_total: { type: Number, required: true },
+      observaciones: { type: String, default: '' },
+      comprobante: {
+        archivo: { type: String, default: '' },
+        tipo_archivo: { type: String, default: '' },
+        fecha_carga: { type: Date }
+      },
+      fecha_creacion: { type: Date, default: Date.now },
+      fecha_actualizacion: { type: Date, default: Date.now }
+    });
 
-      const AssistentSchema = new mongoose.Schema({
-        id: { type: String, required: true, unique: true },
-        invitacion_id: { type: String, required: true },
-        nombre: { type: String, required: true },
-        apellido: { type: String, required: true },
-        email: { type: String, default: '' },
-        tipo_asistente: { type: String, enum: ['adulto', 'menor'], required: true },
-        restriccion_alimentaria: { 
-          type: String, 
-          enum: ['celiaquia', 'vegetarianismo', 'veganismo', 'alergias', 'ninguna'], 
-          default: 'ninguna' 
-        },
-        restriccion_alimentaria_detalle: { type: String, default: '' },
-        mesa: { type: String, default: '' }
-      });
+    const AssistentSchema = new mongoose.Schema({
+      id: { type: String, required: true, unique: true },
+      invitacion_id: { type: String, required: true },
+      nombre: { type: String, required: true },
+      apellido: { type: String, required: true },
+      email: { type: String, default: '' },
+      tipo_asistente: { type: String, enum: ['adulto', 'menor'], required: true },
+      restriccion_alimentaria: { 
+        type: String, 
+        enum: ['celiaquia', 'vegetarianismo', 'veganismo', 'alergias', 'ninguna'], 
+        default: 'ninguna' 
+      },
+      restriccion_alimentaria_detalle: { type: String, default: '' },
+      mesa: { type: String, default: '' }
+    });
 
-      InvitationModel = mongoose.model('Invitation', InvitationSchema);
-      AssistentModel = mongoose.model('Assistent', AssistentSchema);
+    const AdminSchema = new mongoose.Schema({
+      username: { type: String, required: true, unique: true },
+      passwordHash: { type: String, required: true },
+      fecha_creacion: { type: Date, default: Date.now }
+    });
 
-    } catch (err) {
-      console.error('Error conectando a MongoDB. Cambiando a almacenamiento local JSON...', err);
-      DATABASE_TYPE = 'json';
-      await readJsonDb();
-    }
-  } else {
-    console.log('Utilizando base de datos local JSON en:', jsonDbFile);
-    await readJsonDb();
+    InvitationModel = mongoose.model('Invitation', InvitationSchema);
+    AssistentModel = mongoose.model('Assistent', AssistentSchema);
+    AdminModel = mongoose.model('Admin', AdminSchema);
+
+    // Sembrar administrador por defecto automáticamente
+    await seedAdmin('marcelo', 'ss151100**');
+    await seedAdmin('luciana', '111111');
+
+  } catch (err) {
+    console.error('Error crítico conectando a MongoDB:', err);
+    throw err; // Impedir que el backend inicie sin base de datos
   }
+}
+
+// Hashing de contraseñas con crypto nativo
+function hashPassword(password) {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
+
+// Sembrar administrador
+async function seedAdmin(username, password) {
+  if (!AdminModel) return;
+  const existing = await AdminModel.findOne({ username }).lean();
+  if (!existing) {
+    console.log(`Sembrando usuario administrador por defecto: ${username}...`);
+    const passwordHash = hashPassword(password);
+    await AdminModel.create({ username, passwordHash });
+    console.log(`Usuario administrador ${username} creado con éxito.`);
+  }
+}
+
+// Verificar credenciales de administrador
+async function verifyAdmin(username, password) {
+  if (!AdminModel) return false;
+  const admin = await AdminModel.findOne({ username }).lean();
+  if (!admin) return false;
+  const passwordHash = hashPassword(password);
+  return admin.passwordHash === passwordHash;
 }
 
 // API de Base de Datos
 async function getAllInvitaciones() {
-  if (DATABASE_TYPE === 'mongodb' && InvitationModel) {
-    const invites = await InvitationModel.find().lean();
-    for (let invite of invites) {
-      invite.asistentes = await AssistentModel.find({ invitacion_id: invite.id }).lean();
-    }
-    return invites;
-  } else {
-    const db = await readJsonDb();
-    const result = [];
-    for (let invite of db.invitaciones) {
-      const copy = { ...invite };
-      copy.asistentes = db.asistentes.filter(a => a.invitacion_id === invite.id);
-      result.push(copy);
-    }
-    return result;
+  const invites = await InvitationModel.find().lean();
+  for (let invite of invites) {
+    invite.asistentes = await AssistentModel.find({ invitacion_id: invite.id }).lean();
   }
+  return invites;
 }
 
 async function getInvitacionById(id) {
-  if (DATABASE_TYPE === 'mongodb' && InvitationModel) {
-    const invite = await InvitationModel.findOne({ id }).lean();
-    if (!invite) return null;
-    invite.asistentes = await AssistentModel.find({ invitacion_id: id }).lean();
-    return invite;
-  } else {
-    const db = await readJsonDb();
-    const invite = db.invitaciones.find(i => i.id === id);
-    if (!invite) return null;
-    const copy = { ...invite };
-    copy.asistentes = db.asistentes.filter(a => a.invitacion_id === id);
-    return copy;
-  }
+  const invite = await InvitationModel.findOne({ id }).lean();
+  if (!invite) return null;
+  invite.asistentes = await AssistentModel.find({ invitacion_id: id }).lean();
+  return invite;
 }
 
 async function createInvitacion(invitacionData, asistentesData) {
@@ -187,37 +157,18 @@ async function createInvitacion(invitacionData, asistentesData) {
     mesa: ''
   }));
 
-  if (DATABASE_TYPE === 'mongodb' && InvitationModel) {
-    const createdInvite = await InvitationModel.create(newInvitation);
-    const createdAsistentes = await AssistentModel.insertMany(newAsistentes);
-    const result = createdInvite.toObject();
-    result.asistentes = createdAsistentes.map(a => a.toObject());
-    return result;
-  } else {
-    const db = await readJsonDb();
-    db.invitaciones.push(newInvitation);
-    db.asistentes.push(...newAsistentes);
-    await writeJsonDb(db);
-    const result = { ...newInvitation };
-    result.asistentes = newAsistentes;
-    return result;
-  }
+  const createdInvite = await InvitationModel.create(newInvitation);
+  const createdAsistentes = await AssistentModel.insertMany(newAsistentes);
+  const result = createdInvite.toObject();
+  result.asistentes = createdAsistentes.map(a => a.toObject());
+  return result;
 }
 
 async function getInvitacionByDni(dni) {
-  if (DATABASE_TYPE === 'mongodb' && InvitationModel) {
-    const invite = await InvitationModel.findOne({ dni }).lean();
-    if (!invite) return null;
-    invite.asistentes = await AssistentModel.find({ invitacion_id: invite.id }).lean();
-    return invite;
-  } else {
-    const db = await readJsonDb();
-    const invite = db.invitaciones.find(i => i.dni === dni);
-    if (!invite) return null;
-    const copy = { ...invite };
-    copy.asistentes = db.asistentes.filter(a => a.invitacion_id === invite.id);
-    return copy;
-  }
+  const invite = await InvitationModel.findOne({ dni }).lean();
+  if (!invite) return null;
+  invite.asistentes = await AssistentModel.find({ invitacion_id: invite.id }).lean();
+  return invite;
 }
 
 async function updateInvitacion(id, invitacionData, asistentesData) {
@@ -254,97 +205,44 @@ async function updateInvitacion(id, invitacionData, asistentesData) {
     mesa: a.mesa || ''
   }));
 
-  if (DATABASE_TYPE === 'mongodb' && InvitationModel) {
-    const updated = await InvitationModel.findOneAndUpdate({ id }, updatedInvitation, { new: true }).lean();
-    await AssistentModel.deleteMany({ invitacion_id: id });
-    const insertedAsistentes = await AssistentModel.insertMany(updatedAsistentes);
-    const result = { ...updated };
-    result.asistentes = insertedAsistentes.map(a => a.toObject());
-    return result;
-  } else {
-    const db = await readJsonDb();
-    const index = db.invitaciones.findIndex(i => i.id === id);
-    if (index === -1) return null;
-
-    db.invitaciones[index] = {
-      ...db.invitaciones[index],
-      ...updatedInvitation
-    };
-
-    db.asistentes = db.asistentes.filter(a => a.invitacion_id !== id);
-    db.asistentes.push(...updatedAsistentes);
-    await writeJsonDb(db);
-
-    const result = { ...db.invitaciones[index] };
-    result.asistentes = updatedAsistentes;
-    return result;
-  }
+  const updated = await InvitationModel.findOneAndUpdate({ id }, updatedInvitation, { new: true }).lean();
+  await AssistentModel.deleteMany({ invitacion_id: id });
+  const insertedAsistentes = await AssistentModel.insertMany(updatedAsistentes);
+  const result = { ...updated };
+  result.asistentes = insertedAsistentes.map(a => a.toObject());
+  return result;
 }
 
 async function updateInvitacionStatus(id, estado_pago, estado_asistencia) {
-  if (DATABASE_TYPE === 'mongodb' && InvitationModel) {
-    const updates = { fecha_actualizacion: new Date() };
-    if (estado_pago) updates.estado_pago = estado_pago;
-    if (estado_asistencia) updates.estado_asistencia = estado_asistencia;
+  const updates = { fecha_actualizacion: new Date() };
+  if (estado_pago) updates.estado_pago = estado_pago;
+  if (estado_asistencia) updates.estado_asistencia = estado_asistencia;
 
-    const updated = await InvitationModel.findOneAndUpdate({ id }, updates, { new: true }).lean();
-    if (updated) {
-      updated.asistentes = await AssistentModel.find({ invitacion_id: id }).lean();
-    }
-    return updated;
-  } else {
-    const db = await readJsonDb();
-    const index = db.invitaciones.findIndex(i => i.id === id);
-    if (index === -1) return null;
-
-    if (estado_pago) db.invitaciones[index].estado_pago = estado_pago;
-    if (estado_asistencia) db.invitaciones[index].estado_asistencia = estado_asistencia;
-    db.invitaciones[index].fecha_actualizacion = new Date();
-
-    await writeJsonDb(db);
-    const copy = { ...db.invitaciones[index] };
-    copy.asistentes = db.asistentes.filter(a => a.invitacion_id === id);
-    return copy;
+  const updated = await InvitationModel.findOneAndUpdate({ id }, updates, { new: true }).lean();
+  if (updated) {
+    updated.asistentes = await AssistentModel.find({ invitacion_id: id }).lean();
   }
+  return updated;
 }
 
 async function addComprobante(id, comprobanteData) {
-  if (DATABASE_TYPE === 'mongodb' && InvitationModel) {
-    const updated = await InvitationModel.findOneAndUpdate(
-      { id },
-      {
-        estado_pago: 'a_verificar',
-        comprobante: {
-          archivo: comprobanteData.archivo,
-          tipo_archivo: comprobanteData.tipo_archivo,
-          fecha_carga: new Date()
-        },
-        fecha_actualizacion: new Date()
+  const updated = await InvitationModel.findOneAndUpdate(
+    { id },
+    {
+      estado_pago: 'a_verificar',
+      comprobante: {
+        archivo: comprobanteData.archivo,
+        tipo_archivo: comprobanteData.tipo_archivo,
+        fecha_carga: new Date()
       },
-      { new: true }
-    ).lean();
-    if (updated) {
-      updated.asistentes = await AssistentModel.find({ invitacion_id: id }).lean();
-    }
-    return updated;
-  } else {
-    const db = await readJsonDb();
-    const index = db.invitaciones.findIndex(i => i.id === id);
-    if (index === -1) return null;
-
-    db.invitaciones[index].estado_pago = 'a_verificar';
-    db.invitaciones[index].comprobante = {
-      archivo: comprobanteData.archivo,
-      tipo_archivo: comprobanteData.tipo_archivo,
-      fecha_carga: new Date()
-    };
-    db.invitaciones[index].fecha_actualizacion = new Date();
-
-    await writeJsonDb(db);
-    const copy = { ...db.invitaciones[index] };
-    copy.asistentes = db.asistentes.filter(a => a.invitacion_id === id);
-    return copy;
+      fecha_actualizacion: new Date()
+    },
+    { new: true }
+  ).lean();
+  if (updated) {
+    updated.asistentes = await AssistentModel.find({ invitacion_id: id }).lean();
   }
+  return updated;
 }
 
 async function getStats() {
@@ -359,7 +257,6 @@ async function getStats() {
   let importePendiente = 0;
 
   invitations.forEach(inv => {
-    // Solo sumamos asistentes si la asistencia está confirmada
     if (inv.estado_asistencia === 'confirmado') {
       personasTotales += inv.cantidad_personas;
     }
@@ -387,6 +284,18 @@ async function getStats() {
   };
 }
 
+async function updateAdminPassword(username, newPassword) {
+  if (!AdminModel) throw new Error('Base de datos no inicializada');
+  const passwordHash = hashPassword(newPassword);
+  const result = await AdminModel.findOneAndUpdate(
+    { username },
+    { passwordHash },
+    { new: true }
+  );
+  if (!result) throw new Error('Usuario administrador no encontrado');
+  return result;
+}
+
 module.exports = {
   init,
   getAllInvitaciones,
@@ -396,5 +305,7 @@ module.exports = {
   updateInvitacion,
   updateInvitacionStatus,
   addComprobante,
-  getStats
+  getStats,
+  verifyAdmin,
+  updateAdminPassword
 };

@@ -11,8 +11,6 @@ const mailer = require('./mailer');
 const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_key_123_change_this_in_production';
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
 // Asegurar directorio de subidas existente
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -204,17 +202,23 @@ app.post('/api/rsvp', upload.single('comprobante'), async (req, res) => {
 // --- ENDPOINTS ADMINISTRATIVOS ---
 
 // Login de Administrador
-app.post('/api/admin/login', (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Usuario y contraseña son requeridos.' });
-  }
+app.post('/api/admin/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Usuario y contraseña son requeridos.' });
+    }
 
-  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-    const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '12h' });
-    return res.json({ token });
-  } else {
-    return res.status(401).json({ error: 'Credenciales inválidas.' });
+    const isValid = await db.verifyAdmin(username, password);
+    if (isValid) {
+      const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '12h' });
+      return res.json({ token });
+    } else {
+      return res.status(401).json({ error: 'Credenciales inválidas.' });
+    }
+  } catch (err) {
+    console.error('Error en login de administrador:', err);
+    res.status(500).json({ error: 'Error interno del servidor al procesar el inicio de sesión.' });
   }
 });
 
@@ -310,6 +314,31 @@ app.get('/api/admin/rsvps/export/csv', authenticateAdmin, async (req, res) => {
   } catch (err) {
     console.error('Error al exportar CSV:', err);
     res.status(500).json({ error: 'Error al generar la exportación a CSV.' });
+  }
+});
+
+// Cambiar contraseña de administrador (Autenticado)
+app.post('/api/admin/change-password', authenticateAdmin, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const { username } = req.admin; // Decodificado del JWT en authenticateAdmin
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Se requiere la contraseña actual y la nueva contraseña.' });
+    }
+
+    const isValid = await db.verifyAdmin(username, currentPassword);
+    if (!isValid) {
+      return res.status(401).json({ error: 'La contraseña actual es incorrecta.' });
+    }
+
+    // Actualizar en la base de datos
+    await db.updateAdminPassword(username, newPassword);
+
+    res.json({ success: true, message: 'Contraseña actualizada exitosamente.' });
+  } catch (err) {
+    console.error('Error al cambiar contraseña de administrador:', err);
+    res.status(500).json({ error: 'Error interno del servidor al cambiar la contraseña.' });
   }
 });
 
