@@ -415,11 +415,11 @@ export default function Invitation() {
             {/* Cuadro de salón y fecha */}
             <div style={{ borderRight: '1px solid rgba(226,165,165,0.1)', paddingRight: '1rem', textAlign: 'center' }}>
               <div style={{ fontSize: '1.8rem', color: 'var(--gold)', marginBottom: '0.8rem' }}>✦ Fiesta ✦</div>
-              <h3 style={{ fontSize: '1.5rem', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Salón Elegance Eventos</h3>
-              <p style={{ fontSize: '0.95rem', marginBottom: '1.2rem' }}>Av. de los Constituyentes 4500, Villa Urquiza, CABA</p>
+              <h3 style={{ fontSize: '1.5rem', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Raphael Eventos</h3>
+              <p style={{ fontSize: '0.95rem', marginBottom: '1.2rem' }}>Av. Rafael Nuñez 5241, X5021JLB, Córdoba Capital</p>
               
               <a 
-                href="https://maps.google.com/?q=Av.+de+los+Constituyentes+4500,+Villa+Urquiza,+CABA" 
+                href="https://maps.google.com/?q=Av.+Rafael+Nu%C3%B1ez+5241,+X5021JLB,+C%C3%B3rdoba+Capital" 
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="btn-premium btn-secondary" 
@@ -974,7 +974,7 @@ export default function Invitation() {
         fontSize: '0.85rem'
       }}>
         <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.2rem', color: 'var(--rose-gold-light)', marginBottom: '0.5rem' }}>Sol Rabozzi - Mis 15 Años</div>
-        <div>23 de Enero de 2027 • Salón Elegance</div>
+        <div>23 de Enero de 2027 • Raphael</div>
         <div style={{ marginTop: '1.5rem', fontSize: '0.75rem' }}>© 2026 Sol Rabozzi • Desarrollado para gestión de asistencia</div>
       </footer>
     </div>
