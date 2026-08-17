@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import solPortrait from '../assets/sol_portrait.png';
 
 export default function Invitation() {
@@ -19,6 +20,7 @@ export default function Invitation() {
 
   const [isExistingRegistration, setIsExistingRegistration] = useState(false);
   const [hasExistingComprobante, setHasExistingComprobante] = useState(false);
+  const [existingPaymentState, setExistingPaymentState] = useState('');
   const [isVerifyingDni, setIsVerifyingDni] = useState(false);
   const [dniVerificationMessage, setDniVerificationMessage] = useState('');
 
@@ -201,6 +203,7 @@ export default function Invitation() {
         }
 
         setIsExistingRegistration(true);
+        setExistingPaymentState(data.estado_pago || '');
         if (data.comprobante && data.comprobante.archivo) {
           setHasExistingComprobante(true);
         } else {
@@ -579,6 +582,62 @@ export default function Invitation() {
                   textAlign: 'center'
                 }} className="animated-fade-in">
                   {dniVerificationMessage}
+                </div>
+              )}
+
+              {isExistingRegistration && existingPaymentState === 'verificado' && (
+                <div style={{
+                  margin: '1.5rem 0 2rem 0',
+                  padding: '1.5rem',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '2px solid #10b981',
+                  borderRadius: '16px',
+                  textAlign: 'center'
+                }} className="animated-fade-in">
+                  <h3 style={{ color: '#10b981', margin: '0 0 0.5rem 0', fontSize: '1.3rem', fontWeight: 'bold' }}>
+                    ✓ Pago Verificado - Pases Digitales de Ingreso
+                  </h3>
+                  <p style={{ color: '#d1d5db', fontSize: '0.9rem', marginBottom: '1.2rem' }}>
+                    Presentá estos códigos QR desde tu celular o impresos el día de la fiesta en el ingreso al evento.
+                  </p>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.2rem', justifyContent: 'center' }}>
+                    {asistentes.map((asis, idx) => {
+                      const qrPayload = JSON.stringify({
+                        id: asis.id || `asis-${idx}`,
+                        nombre: `${asis.nombre} ${asis.apellido}`,
+                        dni: formData.dni,
+                        mesa: asis.mesa || 'A definir',
+                        tipo: asis.tipo_asistente === 'menor' ? 'Menor' : 'Adulto',
+                        evento: '15 SOL RABOZZI',
+                        estado: 'VERIFICADO'
+                      });
+
+                      return (
+                        <div key={asis.id || idx} style={{
+                          background: '#1b1126',
+                          border: '1px solid rgba(226, 165, 165, 0.4)',
+                          borderRadius: '12px',
+                          padding: '1.2rem 1rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          boxShadow: '0 4px 15px rgba(0,0,0,0.4)'
+                        }}>
+                          <span style={{ fontSize: '0.8rem', color: '#e2a5a5', fontWeight: 'bold', marginBottom: '8px', letterSpacing: '1px' }}>
+                            🎟️ PASE DE INGRESO
+                          </span>
+                          <div style={{ background: '#ffffff', padding: '10px', borderRadius: '8px', marginBottom: '10px' }}>
+                            <QRCodeSVG value={qrPayload} size={140} fgColor="#4c1d95" bgColor="#ffffff" level="H" />
+                          </div>
+                          <strong style={{ color: '#ffffff', fontSize: '1.05rem' }}>{asis.nombre} {asis.apellido}</strong>
+                          <span style={{ fontSize: '0.8rem', color: '#a78bfa', marginTop: '4px' }}>
+                            Mesa Asignada: <strong>{asis.mesa || 'A definir'}</strong>
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 

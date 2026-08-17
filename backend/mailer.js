@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const QRCode = require('qrcode');
 
 const SMTP_HOST = process.env.SMTP_HOST;
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '25', 10);
@@ -22,6 +23,35 @@ if (SMTP_HOST) {
       rejectUnauthorized: false // Evitar fallos por certificados autofirmados
     }
   });
+}
+
+/**
+ * Genera un Buffer PNG con la información del pase del asistente para adjuntar como CID en Nodemailer.
+ */
+async function generateAssistantQRCodeBuffer(asistente, rsvp) {
+  try {
+    const qrPayload = JSON.stringify({
+      id: asistente.id,
+      nombre: `${asistente.nombre} ${asistente.apellido}`,
+      dni: rsvp.dni,
+      mesa: asistente.mesa || 'A definir',
+      tipo: asistente.tipo_asistente === 'menor' ? 'Menor' : 'Adulto',
+      evento: '15 SOL RABOZZI',
+      estado: 'VERIFICADO'
+    });
+    return await QRCode.toBuffer(qrPayload, {
+      errorCorrectionLevel: 'H',
+      margin: 2,
+      width: 300,
+      color: {
+        dark: '#4c1d95',
+        light: '#ffffff'
+      }
+    });
+  } catch (err) {
+    console.error('Error generando QR code buffer:', err);
+    return null;
+  }
 }
 
 /**
@@ -126,6 +156,12 @@ async function sendGuestInvitationEmail(rsvp, asistente) {
     return;
   }
 
+  const recipientEmail = (asistente.email && asistente.email.trim()) || rsvp.email;
+  if (!recipientEmail) {
+    console.log(`No hay email especificado para el asistente ${asistente.nombre} ni para la reserva.`);
+    return;
+  }
+
   const nombreCompleto = `${asistente.nombre} ${asistente.apellido}`;
   const esMenor = asistente.tipo_asistente === 'menor';
   const tarjetaDetalle = esMenor ? 'Menor de 12 ($25.000)' : 'Mayor ($50.000)';
@@ -148,12 +184,44 @@ async function sendGuestInvitationEmail(rsvp, asistente) {
     estadoPagoHtml = '<span style="color: #ef4444; font-weight: bold;">⚠️ Pago Pendiente</span>';
   }
 
+  let qrHtmlSection = '';
+  const attachments = [];
+
+  if (rsvp.estado_pago === 'verificado') {
+    const qrBuffer = await generateAssistantQRCodeBuffer(asistente, rsvp);
+    if (qrBuffer) {
+      const cidName = `qrcode_${asistente.id ? asistente.id.replace(/[^a-zA-Z0-9]/g, '') : Date.now()}`;
+      
+      attachments.push({
+        filename: `pase_qr_${(asistente.nombre || 'asistente').toLowerCase().replace(/\s+/g, '_')}.png`,
+        content: qrBuffer,
+        cid: cidName
+      });
+
+      qrHtmlSection = `
+        <div style="text-align: center; margin: 25px 0; padding: 20px; background-color: rgba(107, 33, 168, 0.2); border: 2px dashed #e2a5a5; border-radius: 12px;">
+          <span style="font-size: 1.2rem; font-weight: bold; color: #e2a5a5; display: block; margin-bottom: 8px; letter-spacing: 1px;">🎟️ PASE DE INGRESO INDIVIDUAL (CÓDIGO QR)</span>
+          <p style="font-size: 13px; color: #d8b4fe; margin-top: 0; margin-bottom: 15px;">Presentá este código QR desde tu celular o impreso el día de la fiesta en el ingreso.</p>
+          <div style="background: #ffffff; padding: 12px; display: inline-block; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+            <img src="cid:${cidName}" alt="Código QR de Ingreso - ${nombreCompleto}" style="width: 200px; height: 200px; display: block; margin: 0 auto;" />
+          </div>
+          <div style="margin-top: 12px; font-size: 14px; color: #ffffff;">
+            <strong>Asistente:</strong> ${nombreCompleto}<br/>
+            <span style="font-size: 13px; color: #a78bfa;">Mesa Asignada: <strong>${asistente.mesa || 'A definir'}</strong></span>
+          </div>
+        </div>
+      `;
+    }
+  }
+
   const websiteUrl = process.env.WEBSITE_URL || 'https://solrabozzi.com';
 
   const mailOptions = {
     from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
-    to: asistente.email,
-    subject: `¡Tu invitación a los 15 de Sol Rabozzi! ✨`,
+    to: recipientEmail,
+    subject: rsvp.estado_pago === 'verificado' 
+      ? `🎟️ ¡Tu Pase de Ingreso QR para los 15 de Sol Rabozzi! ✨`
+      : `¡Tu invitación a los 15 de Sol Rabozzi! ✨`,
     html: `
       <div style="background-color: #0f0913; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #f3e8ff; max-width: 600px; margin: 0 auto; border: 1px solid #4a1d6d; border-radius: 12px; padding: 30px; background-image: radial-gradient(circle at top, #1e112a 0%, #0f0913 100%);">
         
@@ -167,10 +235,13 @@ async function sendGuestInvitationEmail(rsvp, asistente) {
             ¡Hola, <strong style="color: #ffffff;">${nombreCompleto}</strong>! 
           </p>
           <p style="font-size: 1.05rem; line-height: 1.6; text-align: center; color: #d8b4fe;">
-            Hay momentos que son inolvidables, pero compartirlos con quienes más queremos los hace eternos. 
-            Te invito a celebrar conmigo esta noche mágica.
+            ${rsvp.estado_pago === 'verificado' 
+              ? '¡Tu pago ha sido verificado con éxito! Adjuntamos tu pase de ingreso con código QR.' 
+              : 'Hay momentos que son inolvidables, pero compartirlos con quienes más queremos los hace eternos. Te invito a celebrar conmigo esta noche mágica.'}
           </p>
         </div>
+
+        ${qrHtmlSection}
 
         <h3 style="color: #e2a5a5; border-bottom: 1px solid rgba(226, 165, 165, 0.2); padding-bottom: 8px; margin-top: 0; font-weight: normal; letter-spacing: 1px;">DETALLES DE LA FIESTA</h3>
         
@@ -202,7 +273,7 @@ async function sendGuestInvitationEmail(rsvp, asistente) {
             <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); color: #d8b4fe;">🚪 Ingreso / Mesa:</td>
             <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); color: #ffffff;">
               Mesa asignada: <strong>${asistente.mesa || 'A definir'}</strong><br/>
-              <span style="font-size: 12px; color: #a78bfa;">* El control se realiza en puerta por lista, no es necesario llevar DNI físico.</span>
+              <span style="font-size: 12px; color: #a78bfa;">* Presentar el código QR en la entrada para el ingreso al evento.</span>
             </td>
           </tr>
         </table>
@@ -236,21 +307,22 @@ async function sendGuestInvitationEmail(rsvp, asistente) {
         </div>
 
       </div>
-    `
+    `,
+    attachments: attachments.length > 0 ? attachments : undefined
   };
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log(`Email de invitación enviado con éxito a ${asistente.email}: ${info.messageId}`);
+    console.log(`Email de invitación enviado con éxito a ${recipientEmail}: ${info.messageId}`);
     return info;
   } catch (error) {
-    console.error(`Error al enviar email de invitación a ${asistente.email}:`, error);
+    console.error(`Error al enviar email de invitación a ${recipientEmail}:`, error);
     throw error;
   }
 }
 
 module.exports = {
   sendRsvpNotification,
-  sendGuestInvitationEmail
+  sendGuestInvitationEmail,
+  generateAssistantQRCodeBuffer
 };
-

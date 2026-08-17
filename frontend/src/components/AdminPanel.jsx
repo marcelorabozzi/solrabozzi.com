@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function AdminPanel() {
   const [token, setToken] = useState(localStorage.getItem('adminToken') || '');
@@ -656,35 +657,50 @@ export default function AdminPanel() {
               {/* Lista detallada de asistentes individuales */}
               <div style={{ marginBottom: '1.5rem' }}>
                 <h4 style={{ color: 'var(--rose-gold-light)', borderBottom: '1px solid rgba(226,165,165,0.1)', paddingBottom: '0.3rem', marginBottom: '1rem' }}>Asistentes Individuales</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {selectedRsvp.asistentes && selectedRsvp.asistentes.map((asis, index) => (
-                    <div key={index} style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      background: 'rgba(10,4,11,0.5)',
-                      padding: '0.8rem 1rem',
-                      borderRadius: '8px',
-                      borderLeft: '3px solid var(--rose-gold)'
-                    }}>
-                      <div>
-                        <strong>{asis.nombre} {asis.apellido}</strong>
-                        <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                          Categoría: {asis.tipo_asistente === 'adulto' ? 'Mayor' : 'Menor de 12'}
-                          {asis.email && ` • Email: ${asis.email}`}
-                        </span>
-                      </div>
-                      <div>
-                        {asis.restriccion_alimentaria !== 'ninguna' ? (
-                          <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>
-                            ⚠️ Restricción: {asis.restriccion_alimentaria === 'alergias' ? (asis.restriccion_alimentaria_detalle || 'Alergia') : asis.restriccion_alimentaria}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                  {selectedRsvp.asistentes && selectedRsvp.asistentes.map((asis, index) => {
+                    const qrPayload = JSON.stringify({
+                      id: asis.id || `asis-${index}`,
+                      nombre: `${asis.nombre} ${asis.apellido}`,
+                      dni: selectedRsvp.dni,
+                      mesa: asis.mesa || 'A definir',
+                      tipo: asis.tipo_asistente === 'menor' ? 'Menor' : 'Adulto',
+                      evento: '15 SOL RABOZZI',
+                      estado: 'VERIFICADO'
+                    });
+
+                    return (
+                      <div key={index} style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        background: 'rgba(10,4,11,0.5)',
+                        padding: '0.8rem 1rem',
+                        borderRadius: '8px',
+                        borderLeft: '3px solid var(--rose-gold)'
+                      }}>
+                        <div>
+                          <strong>{asis.nombre} {asis.apellido}</strong>
+                          <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            Categoría: {asis.tipo_asistente === 'adulto' ? 'Mayor' : 'Menor de 12'}
+                            {asis.email && ` • Email: ${asis.email}`}
                           </span>
-                        ) : (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Sin restricciones</span>
+                          {asis.restriccion_alimentaria !== 'ninguna' && (
+                            <span className="badge badge-warning" style={{ fontSize: '0.7rem', marginTop: '4px', display: 'inline-block' }}>
+                              ⚠️ Restricción: {asis.restriccion_alimentaria === 'alergias' ? (asis.restriccion_alimentaria_detalle || 'Alergia') : asis.restriccion_alimentaria}
+                            </span>
+                          )}
+                        </div>
+
+                        {selectedRsvp.estado_pago === 'verificado' && (
+                          <div style={{ textAlign: 'center', padding: '4px', background: '#ffffff', borderRadius: '6px', boxShadow: '0 2px 6px rgba(0,0,0,0.3)' }}>
+                            <QRCodeSVG value={qrPayload} size={70} fgColor="#4c1d95" bgColor="#ffffff" level="L" />
+                            <span style={{ display: 'block', fontSize: '0.6rem', color: '#6b21a8', fontWeight: 'bold', marginTop: '2px' }}>PASE QR</span>
+                          </div>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
