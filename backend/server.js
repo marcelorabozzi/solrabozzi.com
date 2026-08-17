@@ -224,6 +224,179 @@ app.post('/api/rsvp', upload.single('comprobante'), async (req, res) => {
   }
 });
 
+// --- ENDPOINT DE ACREDITACIÓN VÍA QR ---
+
+function renderCheckInResultPage({ success, title, subtitle, message, badgeColor, details }) {
+  const detailsRows = details ? Object.entries(details).map(([k, v]) => `
+    <tr>
+      <td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); color: #a78bfa; font-weight: bold; width: 45%;">${k}:</td>
+      <td style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); color: #ffffff; font-weight: bold;">${v}</td>
+    </tr>
+  `).join('') : '';
+
+  return `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${title} - Sol Rabozzi Mis 15</title>
+      <style>
+        body {
+          margin: 0;
+          padding: 20px;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          background: #0f0913;
+          color: #f3e8ff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
+          box-sizing: border-box;
+        }
+        .card {
+          background: #190e24;
+          border: 2px solid ${badgeColor};
+          border-radius: 20px;
+          padding: 30px 20px;
+          max-width: 480px;
+          width: 100%;
+          text-align: center;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+        }
+        .badge {
+          display: inline-block;
+          padding: 8px 20px;
+          border-radius: 50px;
+          background: ${badgeColor};
+          color: #ffffff;
+          font-weight: bold;
+          font-size: 1.1rem;
+          margin-bottom: 15px;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+          letter-spacing: 1px;
+        }
+        h1 { font-size: 1.6rem; color: #ffffff; margin: 10px 0 5px 0; }
+        h2 { font-size: 1.2rem; color: #e2a5a5; margin: 0 0 15px 0; font-weight: 400; }
+        p { font-size: 1rem; color: #d8b4fe; line-height: 1.5; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; text-align: left; margin-top: 15px; font-size: 0.95rem; }
+        .footer { margin-top: 25px; font-size: 0.85rem; color: #a78bfa; border-top: 1px solid rgba(226, 165, 165, 0.15); padding-top: 15px; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="badge">${success ? '✓ ACREDITADO' : '⚠️ ATENCIÓN'}</div>
+        <h1>${title}</h1>
+        ${subtitle ? `<h2>${subtitle}</h2>` : ''}
+        <p>${message}</p>
+        ${detailsRows ? `<table>${detailsRows}</table>` : ''}
+        <div class="footer">
+          ✨ Sol Rabozzi - Mis 15 Años ✨
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+const handleCheckInRequest = async (req, res) => {
+  try {
+    const { assistantId } = req.params;
+    if (!assistantId) {
+      return res.status(400).send(renderCheckInResultPage({
+        success: false,
+        title: 'Error de Lectura',
+        message: 'El código QR leído no contiene un identificador válido.',
+        badgeColor: '#ef4444'
+      }));
+    }
+
+    const data = await db.getAssistentById(assistantId);
+    if (!data || !data.assistant) {
+      return res.status(404).send(renderCheckInResultPage({
+        success: false,
+        title: 'Pase No Encontrado',
+        message: 'El código QR escaneado no corresponde a ningún asistente registrado.',
+        badgeColor: '#ef4444'
+      }));
+    }
+
+    const { assistant, rsvp } = data;
+    const nombreCompleto = `${assistant.nombre} ${assistant.apellido}`;
+
+    // Verificar si la reserva/pago fue verificada
+    if (!rsvp || rsvp.estado_pago !== 'verificado') {
+      return res.status(400).send(renderCheckInResultPage({
+        success: false,
+        title: 'Pago No Verificado',
+        subtitle: `Asistente: ${nombreCompleto}`,
+        message: 'El pago correspondiente a esta tarjeta aún no ha sido verificado por la organización.',
+        badgeColor: '#f59e0b',
+        details: {
+          'DNI Responsable': rsvp ? rsvp.dni : '-',
+          'Estado del Pago': rsvp ? rsvp.estado_pago : 'No registrado'
+        }
+      }));
+    }
+
+    // Verificar si ya ingresó previamente
+    if (assistant.estado_asistencia === 'presente') {
+      const horaIngreso = assistant.fecha_ingreso 
+        ? new Date(assistant.fecha_ingreso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
+        : 'Previamente';
+
+      return res.status(400).send(renderCheckInResultPage({
+        success: false,
+        title: '⚠️ ACREDITACIÓN PREVIA',
+        subtitle: nombreCompleto,
+        message: `Este pase ya fue utilizado para ingresar al evento el ${horaIngreso}.`,
+        badgeColor: '#f59e0b',
+        details: {
+          'Asistente': nombreCompleto,
+          'Mesa Asignada': assistant.mesa || 'A definir',
+          'Hora de Ingreso': `${horaIngreso} hs`
+        }
+      }));
+    }
+
+    // Acreditar asistente (check-in)
+    const result = await db.checkInAssistent(assistantId);
+    const horaAcreditacion = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+
+    // Enviar correo de confirmación de ingreso de forma asincrónica
+    mailer.sendCheckInConfirmationEmail(rsvp, result.assistant).catch(err => {
+      console.error('Error al enviar correo de acreditación:', err);
+    });
+
+    return res.send(renderCheckInResultPage({
+      success: true,
+      title: '🎉 ¡INGRESO ACREDITADO!',
+      subtitle: nombreCompleto,
+      message: '¡Asistencia confirmada con éxito! Bienvenido/a a la fiesta de 15 de Sol.',
+      badgeColor: '#10b981',
+      details: {
+        'Asistente': nombreCompleto,
+        'Categoría': assistant.tipo_asistente === 'menor' ? 'Menor de 12' : 'Mayor',
+        'Mesa Asignada': assistant.mesa || 'A definir',
+        'Menú / Restricción': assistant.restriccion_alimentaria !== 'ninguna' ? (assistant.restriccion_alimentaria_detalle || assistant.restriccion_alimentaria) : 'Sin restricciones',
+        'Hora de Ingreso': `${horaAcreditacion} hs`
+      }
+    }));
+
+  } catch (err) {
+    console.error('Error en endpoint de check-in:', err);
+    return res.status(500).send(renderCheckInResultPage({
+      success: false,
+      title: 'Error Servidor',
+      message: 'Ocurrió un error interno al procesar la acreditación.',
+      badgeColor: '#ef4444'
+    }));
+  }
+};
+
+app.get('/api/checkin/:assistantId', handleCheckInRequest);
+app.get('/checkin/:assistantId', handleCheckInRequest);
+
 // --- ENDPOINTS ADMINISTRATIVOS ---
 
 // Login de Administrador

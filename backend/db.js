@@ -54,7 +54,9 @@ async function init() {
         default: 'ninguna' 
       },
       restriccion_alimentaria_detalle: { type: String, default: '' },
-      mesa: { type: String, default: '' }
+      mesa: { type: String, default: '' },
+      estado_asistencia: { type: String, enum: ['ausente', 'presente'], default: 'ausente' },
+      fecha_ingreso: { type: Date, default: null }
     });
 
     const AdminSchema = new mongoose.Schema({
@@ -321,11 +323,32 @@ async function updateAdminPassword(username, newPassword) {
   return result;
 }
 
+async function getAssistentById(id) {
+  const assistant = await AssistentModel.findOne({ id }).lean();
+  if (!assistant) return null;
+  const rsvp = await InvitationModel.findOne({ id: assistant.invitacion_id }).lean();
+  return { assistant, rsvp };
+}
+
+async function checkInAssistent(id) {
+  const now = new Date();
+  const updatedAssistant = await AssistentModel.findOneAndUpdate(
+    { id },
+    { estado_asistencia: 'presente', fecha_ingreso: now },
+    { new: true }
+  ).lean();
+  if (!updatedAssistant) return null;
+  const rsvp = await InvitationModel.findOne({ id: updatedAssistant.invitacion_id }).lean();
+  return { assistant: updatedAssistant, rsvp };
+}
+
 module.exports = {
   init,
   getAllInvitaciones,
   getInvitacionById,
   getInvitacionByDni,
+  getAssistentById,
+  checkInAssistent,
   createInvitacion,
   updateInvitacion,
   updateInvitacionStatus,

@@ -26,19 +26,12 @@ if (SMTP_HOST) {
 }
 
 /**
- * Genera un Buffer PNG con la información del pase del asistente para adjuntar como CID en Nodemailer.
+ * Genera un Buffer PNG con la URL directa de acreditación del asistente para adjuntar como CID en Nodemailer.
  */
 async function generateAssistantQRCodeBuffer(asistente, rsvp) {
   try {
-    const qrPayload = JSON.stringify({
-      id: asistente.id,
-      nombre: `${asistente.nombre} ${asistente.apellido}`,
-      dni: rsvp.dni,
-      mesa: asistente.mesa || 'A definir',
-      tipo: asistente.tipo_asistente === 'menor' ? 'Menor' : 'Adulto',
-      evento: '15 SOL RABOZZI',
-      estado: 'VERIFICADO'
-    });
+    const websiteUrl = process.env.WEBSITE_URL || 'https://solrabozzi.com';
+    const qrPayload = `${websiteUrl}/api/checkin/${asistente.id}`;
     return await QRCode.toBuffer(qrPayload, {
       errorCorrectionLevel: 'H',
       margin: 2,
@@ -321,8 +314,78 @@ async function sendGuestInvitationEmail(rsvp, asistente) {
   }
 }
 
+/**
+ * Envía un correo electrónico notificando que el ingreso del asistente ha sido acreditado exitosamente.
+ */
+async function sendCheckInConfirmationEmail(rsvp, asistente) {
+  if (!transporter) {
+    console.log('Servicio de correo SMTP no configurado.');
+    return;
+  }
+
+  const recipientEmail = (asistente.email && asistente.email.trim()) || rsvp.email;
+  if (!recipientEmail) return;
+
+  const nombreCompleto = `${asistente.nombre} ${asistente.apellido}`;
+  const horaIngreso = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+
+  const mailOptions = {
+    from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+    to: recipientEmail,
+    subject: `✅ ¡Ingreso Acreditado! Bienvenido/a ${nombreCompleto} ✨`,
+    html: `
+      <div style="background-color: #0f0913; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #f3e8ff; max-width: 600px; margin: 0 auto; border: 1px solid #10b981; border-radius: 12px; padding: 30px; background-image: radial-gradient(circle at top, #112a1f 0%, #0f0913 100%);">
+        
+        <div style="text-align: center; margin-bottom: 25px;">
+          <span style="font-size: 3rem;">✅</span>
+          <h1 style="color: #10b981; font-size: 1.8rem; margin: 10px 0 0 0; font-weight: 300; letter-spacing: 2px;">INGRESO ACREDITADO</h1>
+          <p style="color: #e2a5a5; font-size: 1.1rem; margin-top: 5px; font-weight: 300;">MIS 15 AÑOS - SOL RABOZZI</p>
+        </div>
+
+        <div style="background-color: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 20px; text-align: center; margin-bottom: 25px;">
+          <h2 style="color: #ffffff; margin-top: 0; font-size: 1.4rem;">¡Hola, ${nombreCompleto}!</h2>
+          <p style="color: #d8b4fe; font-size: 1.05rem; margin-bottom: 0;">
+            Tu ingreso a la fiesta ha sido acreditado exitosamente a las <strong style="color: #ffffff;">${horaIngreso} hs</strong>. ¡Te damos la bienvenida a la noche de Sol!
+          </p>
+        </div>
+
+        <h3 style="color: #e2a5a5; border-bottom: 1px solid rgba(226, 165, 165, 0.2); padding-bottom: 8px; margin-top: 0; font-weight: normal; letter-spacing: 1px;">DATOS DE ACCESO</h3>
+
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 15px;">
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); color: #d8b4fe; width: 40%;">Asistente:</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); font-weight: bold; color: #ffffff;">${nombreCompleto}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); color: #d8b4fe;">Mesa Asignada:</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); font-weight: bold; color: #ffffff;">${asistente.mesa || 'A definir'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); color: #d8b4fe;">Hora de Ingreso:</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); color: #ffffff;">${horaIngreso} hs</td>
+          </tr>
+        </table>
+
+        <div style="text-align: center; border-top: 1px solid rgba(226, 165, 165, 0.1); padding-top: 15px; margin-top: 25px; font-size: 12px; color: #a78bfa;">
+          ¡Disfruta de una fiesta inolvidable!<br/>
+          <strong style="color: #e2a5a5; display: block; margin-top: 5px;">Sol Rabozzi</strong>
+        </div>
+
+      </div>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Email de confirmación de acreditación enviado a ${recipientEmail}`);
+  } catch (err) {
+    console.error(`Error enviando email de acreditación a ${recipientEmail}:`, err);
+  }
+}
+
 module.exports = {
   sendRsvpNotification,
   sendGuestInvitationEmail,
+  sendCheckInConfirmationEmail,
   generateAssistantQRCodeBuffer
 };

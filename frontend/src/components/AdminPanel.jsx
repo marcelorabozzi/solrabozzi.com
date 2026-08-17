@@ -659,15 +659,10 @@ export default function AdminPanel() {
                 <h4 style={{ color: 'var(--rose-gold-light)', borderBottom: '1px solid rgba(226,165,165,0.1)', paddingBottom: '0.3rem', marginBottom: '1rem' }}>Asistentes Individuales</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                   {selectedRsvp.asistentes && selectedRsvp.asistentes.map((asis, index) => {
-                    const qrPayload = JSON.stringify({
-                      id: asis.id || `asis-${index}`,
-                      nombre: `${asis.nombre} ${asis.apellido}`,
-                      dni: selectedRsvp.dni,
-                      mesa: asis.mesa || 'A definir',
-                      tipo: asis.tipo_asistente === 'menor' ? 'Menor' : 'Adulto',
-                      evento: '15 SOL RABOZZI',
-                      estado: 'VERIFICADO'
-                    });
+                    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://solrabozzi.com';
+                    const qrPayload = `${baseUrl}/api/checkin/${asis.id}`;
+                    const esPresente = asis.estado_asistencia === 'presente';
+                    const horaIngresoStr = asis.fecha_ingreso ? new Date(asis.fecha_ingreso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '';
 
                     return (
                       <div key={index} style={{
@@ -677,11 +672,22 @@ export default function AdminPanel() {
                         background: 'rgba(10,4,11,0.5)',
                         padding: '0.8rem 1rem',
                         borderRadius: '8px',
-                        borderLeft: '3px solid var(--rose-gold)'
+                        borderLeft: esPresente ? '3px solid #10b981' : '3px solid var(--rose-gold)'
                       }}>
                         <div>
-                          <strong>{asis.nombre} {asis.apellido}</strong>
-                          <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <strong>{asis.nombre} {asis.apellido}</strong>
+                            {esPresente ? (
+                              <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>
+                                ✓ Presente {horaIngresoStr && `(${horaIngresoStr} hs)`}
+                              </span>
+                            ) : (
+                              <span className="badge" style={{ fontSize: '0.65rem', backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--text-muted)' }}>
+                                Ausente
+                              </span>
+                            )}
+                          </div>
+                          <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                             Categoría: {asis.tipo_asistente === 'adulto' ? 'Mayor' : 'Menor de 12'}
                             {asis.email && ` • Email: ${asis.email}`}
                           </span>

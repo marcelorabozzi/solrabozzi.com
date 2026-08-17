@@ -603,15 +603,8 @@ export default function Invitation() {
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.2rem', justifyContent: 'center' }}>
                     {asistentes.map((asis, idx) => {
-                      const qrPayload = JSON.stringify({
-                        id: asis.id || `asis-${idx}`,
-                        nombre: `${asis.nombre} ${asis.apellido}`,
-                        dni: formData.dni,
-                        mesa: asis.mesa || 'A definir',
-                        tipo: asis.tipo_asistente === 'menor' ? 'Menor' : 'Adulto',
-                        evento: '15 SOL RABOZZI',
-                        estado: 'VERIFICADO'
-                      });
+                      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://solrabozzi.com';
+                      const qrPayload = `${baseUrl}/api/checkin/${asis.id}`;
 
                       return (
                         <div key={asis.id || idx} style={{
