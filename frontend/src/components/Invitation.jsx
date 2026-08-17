@@ -283,18 +283,18 @@ export default function Invitation() {
       return;
     }
 
-    // Validación básica de asistentes
-    const incomplete = asistentes.some(a => !a.nombre.trim() || !a.apellido.trim());
+    // Validación básica de asistentes (todos deben tener nombre, apellido y correo electrónico)
+    const incomplete = asistentes.some(a => !a.nombre.trim() || !a.apellido.trim() || !a.email || !a.email.trim());
     if (incomplete) {
-      setErrorMessage('Por favor, ingresa el nombre y apellido de todos los asistentes.');
+      setErrorMessage('Por favor, ingresa el nombre, apellido y correo electrónico de todos los asistentes.');
       setIsSubmitting(false);
       return;
     }
 
-    // Validación de correos opcionales de asistentes si están cargados
-    const invalidGuestEmails = asistentes.some(a => a.email && a.email.trim() && !emailRegex.test(a.email.trim()));
+    // Validación de correos de todos los asistentes
+    const invalidGuestEmails = asistentes.some(a => !emailRegex.test(a.email.trim()));
     if (invalidGuestEmails) {
-      setErrorMessage('Por favor, ingresa correos electrónicos válidos para los asistentes.');
+      setErrorMessage('Por favor, ingresa correos electrónicos válidos para todos los asistentes.');
       setIsSubmitting(false);
       return;
     }
@@ -709,9 +709,10 @@ export default function Invitation() {
                           />
                         </div>
                         <div className="form-group" style={{ marginBottom: '0.8rem' }}>
-                          <label className="form-label" style={{ fontSize: '0.75rem' }}>Email (Opcional)</label>
+                          <label className="form-label" style={{ fontSize: '0.75rem' }}>Email</label>
                           <input 
                             type="email" 
+                            required
                             value={asis.email || ''} 
                             onChange={(e) => handleAsistenteChange(idx, 'email', e.target.value)} 
                             className="form-input" 

@@ -116,6 +116,19 @@ app.post('/api/rsvp', upload.single('comprobante'), async (req, res) => {
       }
     }
 
+    // Validar datos obligatorios y formato de email para cada asistente
+    if (parsedAsistentes && parsedAsistentes.length > 0) {
+      for (const asis of parsedAsistentes) {
+        if (!asis.nombre || !asis.nombre.trim() || !asis.apellido || !asis.apellido.trim() || !asis.email || !asis.email.trim()) {
+          return res.status(400).json({ error: 'Todos los asistentes deben tener nombre, apellido y correo electrónico.' });
+        }
+        if (!emailRegex.test(asis.email.trim())) {
+          return res.status(400).json({ error: `El correo electrónico '${asis.email}' de uno de los asistentes no es válido.` });
+        }
+      }
+    }
+
+
     // Verificar si ya existe una invitación con este DNI
     const existing = await db.getInvitacionByDni(dni);
     let result;
@@ -173,6 +186,18 @@ app.post('/api/rsvp', upload.single('comprobante'), async (req, res) => {
     mailer.sendRsvpNotification(result, result.asistentes || parsedAsistentes).catch(mailErr => {
       console.error('Error al enviar la notificación por correo del RSVP:', mailErr);
     });
+
+    // Enviar correos de invitación a cada uno de los asistentes de manera asincrónica
+    const asistentesList = result.asistentes || parsedAsistentes;
+    if (asistentesList && asistentesList.length > 0) {
+      asistentesList.forEach(asis => {
+        if (asis.email && asis.email.trim()) {
+          mailer.sendGuestInvitationEmail(result, asis).catch(mailErr => {
+            console.error(`Error al enviar el email de invitación a ${asis.nombre} (${asis.email}):`, mailErr);
+          });
+        }
+      });
+    }
 
     // Mensajes de resultado sugeridos en RF-038 y RF-039
     if (modalidad_pago === 'ahora') {
@@ -255,6 +280,18 @@ app.post('/api/admin/rsvps/:id/verify', authenticateAdmin, async (req, res) => {
     const updated = await db.updateInvitacionStatus(id, estado_pago, estado_asistencia);
     if (!updated) {
       return res.status(404).json({ error: 'Invitación no encontrada.' });
+    }
+
+    // Enviar correos de invitación actualizados a cada uno de los asistentes de manera asincrónica
+    const asistentesList = updated.asistentes || [];
+    if (asistentesList && asistentesList.length > 0) {
+      asistentesList.forEach(asis => {
+        if (asis.email && asis.email.trim()) {
+          mailer.sendGuestInvitationEmail(updated, asis).catch(mailErr => {
+            console.error(`Error al enviar la invitación actualizada por correo a ${asis.nombre} (${asis.email}):`, mailErr);
+          });
+        }
+      });
     }
 
     res.json({ success: true, data: updated });

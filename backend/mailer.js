@@ -117,6 +117,140 @@ async function sendRsvpNotification(rsvp, asistentes) {
   }
 }
 
+/**
+ * Envía un correo electrónico de invitación personalizado a un invitado/asistente individual.
+ */
+async function sendGuestInvitationEmail(rsvp, asistente) {
+  if (!transporter) {
+    console.log('Servicio de correo SMTP no configurado (falta SMTP_HOST en el entorno).');
+    return;
+  }
+
+  const nombreCompleto = `${asistente.nombre} ${asistente.apellido}`;
+  const esMenor = asistente.tipo_asistente === 'menor';
+  const tarjetaDetalle = esMenor ? 'Menor de 12 ($25.000)' : 'Mayor ($50.000)';
+
+  let restriccionDetalle = 'Ninguna';
+  if (asistente.restriccion_alimentaria && asistente.restriccion_alimentaria !== 'ninguna') {
+    if (asistente.restriccion_alimentaria === 'alergias') {
+      restriccionDetalle = asistente.restriccion_alimentaria_detalle || 'Alergias / Otra';
+    } else {
+      restriccionDetalle = asistente.restriccion_alimentaria.charAt(0).toUpperCase() + asistente.restriccion_alimentaria.slice(1);
+    }
+  }
+
+  let estadoPagoHtml = '';
+  if (rsvp.estado_pago === 'verificado') {
+    estadoPagoHtml = '<span style="color: #10b981; font-weight: bold;">✓ Pago Verificado - ¡Ingreso Confirmado!</span>';
+  } else if (rsvp.estado_pago === 'a_verificar') {
+    estadoPagoHtml = '<span style="color: #f59e0b; font-weight: bold;">⏳ Pago a verificar - Pendiente de validación</span>';
+  } else {
+    estadoPagoHtml = '<span style="color: #ef4444; font-weight: bold;">⚠️ Pago Pendiente</span>';
+  }
+
+  const websiteUrl = process.env.WEBSITE_URL || 'https://solrabozzi.com';
+
+  const mailOptions = {
+    from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+    to: asistente.email,
+    subject: `¡Tu invitación a los 15 de Sol Rabozzi! ✨`,
+    html: `
+      <div style="background-color: #0f0913; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #f3e8ff; max-width: 600px; margin: 0 auto; border: 1px solid #4a1d6d; border-radius: 12px; padding: 30px; background-image: radial-gradient(circle at top, #1e112a 0%, #0f0913 100%);">
+        
+        <div style="text-align: center; margin-bottom: 25px;">
+          <span style="font-size: 2.5rem; color: #e2a5a5;">✨ 𝔖𝔬𝔩 ℜ𝔞𝔟𝔬𝔷𝔷𝔦 ✨</span>
+          <h1 style="color: #e2a5a5; font-size: 1.8rem; margin: 10px 0 0 0; font-weight: 300; letter-spacing: 2px;">MIS 15 AÑOS</h1>
+        </div>
+
+        <div style="background-color: rgba(30, 17, 42, 0.6); border: 1px solid rgba(226, 165, 165, 0.2); border-radius: 10px; padding: 20px; margin-bottom: 25px;">
+          <p style="font-size: 1.1rem; line-height: 1.6; margin-top: 0; text-align: center;">
+            ¡Hola, <strong style="color: #ffffff;">${nombreCompleto}</strong>! 
+          </p>
+          <p style="font-size: 1.05rem; line-height: 1.6; text-align: center; color: #d8b4fe;">
+            Hay momentos que son inolvidables, pero compartirlos con quienes más queremos los hace eternos. 
+            Te invito a celebrar conmigo esta noche mágica.
+          </p>
+        </div>
+
+        <h3 style="color: #e2a5a5; border-bottom: 1px solid rgba(226, 165, 165, 0.2); padding-bottom: 8px; margin-top: 0; font-weight: normal; letter-spacing: 1px;">DETALLES DE LA FIESTA</h3>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 15px;">
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); color: #d8b4fe; width: 35%;">📅 Fecha y Hora:</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); font-weight: bold; color: #ffffff;">Sábado 23 de Enero - 21:30 hs</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); color: #d8b4fe;">📍 Lugar:</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); color: #ffffff;">
+              <strong>Raphael Eventos</strong><br/>
+              <span style="font-size: 13px; color: #a78bfa;">Av. Rafael Nuñez 5241, Córdoba Capital</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); color: #d8b4fe;">👔 Vestimenta:</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); color: #ffffff;">Formal / Elegante Sport</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); color: #d8b4fe;">🍽️ Menú / Restricción:</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); color: #ffffff;">${restriccionDetalle}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); color: #d8b4fe;">🍷 Categoría Tarjeta:</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); color: #ffffff;">${tarjetaDetalle}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); color: #d8b4fe;">🚪 Ingreso / Mesa:</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid rgba(226, 165, 165, 0.1); color: #ffffff;">
+              Mesa asignada: <strong>${asistente.mesa || 'A definir'}</strong><br/>
+              <span style="font-size: 12px; color: #a78bfa;">* El control se realiza en puerta por lista, no es necesario llevar DNI físico.</span>
+            </td>
+          </tr>
+        </table>
+
+        <h3 style="color: #e2a5a5; border-bottom: 1px solid rgba(226, 165, 165, 0.2); padding-bottom: 8px; margin-top: 0; font-weight: normal; letter-spacing: 1px;">ESTADO DE LA CONFIRMACIÓN</h3>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 14px;">
+          <tr>
+            <td style="padding: 8px 0; color: #d8b4fe; width: 35%;">Responsable del Grupo:</td>
+            <td style="padding: 8px 0; color: #ffffff;">${rsvp.nombre} ${rsvp.apellido}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #d8b4fe;">DNI Responsable:</td>
+            <td style="padding: 8px 0; color: #ffffff;">${rsvp.dni}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #d8b4fe;">Estado del Pago:</td>
+            <td style="padding: 8px 0;">${estadoPagoHtml}</td>
+          </tr>
+        </table>
+
+        <div style="text-align: center; margin-top: 30px; margin-bottom: 15px;">
+          <a href="${websiteUrl}" target="_blank" style="background-color: #6b21a8; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; border: 1px solid #e2a5a5; display: inline-block; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: background-color 0.3s;">
+            🔗 Ver Invitación Digital
+          </a>
+        </div>
+
+        <div style="text-align: center; border-top: 1px solid rgba(226, 165, 165, 0.1); padding-top: 15px; margin-top: 25px; font-size: 12px; color: #a78bfa;">
+          Te espero para vivir una noche inolvidable. ¡No faltes!<br/>
+          <strong style="color: #e2a5a5; display: block; margin-top: 5px;">Sol Rabozzi</strong>
+        </div>
+
+      </div>
+    `
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`Email de invitación enviado con éxito a ${asistente.email}: ${info.messageId}`);
+    return info;
+  } catch (error) {
+    console.error(`Error al enviar email de invitación a ${asistente.email}:`, error);
+    throw error;
+  }
+}
+
 module.exports = {
-  sendRsvpNotification
+  sendRsvpNotification,
+  sendGuestInvitationEmail
 };
+

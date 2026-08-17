@@ -89,8 +89,8 @@ async function runTests() {
     // 1. Probar Login de Administrador
     console.log('\n1. Probando Login con credenciales correctas...');
     const loginRes = await post(`${BASE_URL}/api/admin/login`, {
-      username: 'admin',
-      password: 'admin123'
+      username: 'luciana',
+      password: '111111'
     });
     
     if (loginRes.statusCode !== 200 || !loginRes.body.token) {
@@ -114,7 +114,7 @@ async function runTests() {
       observaciones: 'Prueba de integración sin archivos',
       asistentes: [
         { nombre: 'Prueba Uno', apellido: 'Automatizada', email: 'uno@correo.com', tipo_asistente: 'adulto', restriccion_alimentaria: 'ninguna' },
-        { nombre: 'Prueba Dos', apellido: 'Automatizada', tipo_asistente: 'menor', restriccion_alimentaria: 'celiaquia' }
+        { nombre: 'Prueba Dos', apellido: 'Automatizada', email: 'dos@correo.com', tipo_asistente: 'menor', restriccion_alimentaria: 'celiaquia' }
       ]
     };
 
